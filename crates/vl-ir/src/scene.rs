@@ -292,7 +292,8 @@ pub enum Tonemap {
 pub struct Post {
     /// `None` = automatic exposure; `Some(ev)` = EV at ISO 100 (15 = sunny day, 7 = living room at night).
     pub exposure_ev: Option<f32>,
-    /// Stops added on top of the (automatic or explicit) exposure.
+    /// Exposure compensation in stops, as on a camera: +1 makes the picture twice as bright,
+    /// -1 half as bright, whether the exposure is automatic or explicit.
     pub exposure_bias: f32,
     pub tonemap: Tonemap,
     /// White balance in kelvin (6500 = neutral).

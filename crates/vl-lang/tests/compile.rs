@@ -195,24 +195,41 @@ fn automatic_camera_frames_the_whole_subject() {
 fn diagnostics_for_typical_mistakes_name_the_fix() {
     let find = |d: &[(String, String, String)], code: &str| d.iter().find(|x| x.0 == code).unwrap_or_else(|| panic!("no {code} in {d:?}")).clone();
 
-    let d = codes("sphere s { raduis: 0.5, colour: red }");
-    assert_eq!(d.len(), 2);
-    assert!(d[0].0 == "E203" && d[0].2.contains("did you mean 'radius'?") && d[0].2.contains("properties of sphere:"));
-    assert!(d[1].2.contains("did you mean 'color'?"));
+    // an unknown property is never fatal: a clear misspelling is read as intended, anything
+    // else is ignored, and either way the message says what was done
+    let c = ok("sphere s { raduis: 0.2, colour: red, bounce: 3 }");
+    let d = codes("sphere s { raduis: 0.2, colour: red, bounce: 3 }");
+    assert_eq!(d.len(), 2, "{d:?}");
+    assert!(d[0].0 == "W345" && d[0].1.contains("'raduis'; it was read as 'radius'"), "{d:?}");
+    assert!(d[1].0 == "W345" && d[1].1.contains("'bounce'; it was ignored") && d[1].2.contains("properties of sphere:"), "{d:?}");
+    assert!(close(bounds(&c, "s").1.y, 0.4), "the misspelt radius was applied");
 
     let d = codes("sphare s { radius: 1 }\ntable t { }");
     assert!(find(&d, "E202").2.contains("did you mean 'sphere'?"));
     assert!(d.iter().any(|x| x.1.contains("'table'") && x.2.contains("group name")), "unknown kind explains how to build one: {d:?}");
 
+    // a name nothing resembles is an error, and the hint offers no code to copy
     let d = codes("box t { size: [1,1,1] }\nsphere s { radius: 0.1, on: tabel }");
     let e = find(&d, "E201");
-    assert!(e.1.contains("'tabel'") && e.2.contains("define it first"), "{e:?}");
+    assert!(e.1.contains("'tabel'") && e.2.contains("nothing called 'tabel' exists above this line") && !e.2.contains("let "), "{e:?}");
+    // a misspelling of exactly one name is read as that name
+    let c = ok("box table { size: [1,1,1] }\nsphere s { radius: 0.1, on: tabel }");
+    assert!(close(bounds(&c, "s").0.y, 1.0), "the ball stands on the table");
     let d = codes("box table { size: [1,1,1] }\nsphere s { radius: 0.1, on: tabel }");
-    assert!(find(&d, "E201").2.contains("did you mean 'table'?"));
+    assert!(find(&d, "W346").1.contains("read as 'table'"));
+    // but not when two names are equally close
+    let d = codes("sphere ball1 { radius: 0.1 }\nsphere ball2 { radius: 0.1, right_of: ball1 }\nsphere s { radius: 0.1, on: ball3 }");
+    assert!(d.iter().any(|x| x.0 == "E201"), "{d:?}");
 
-    let d = codes("box t { }\nsphere s { on: t, at: [0, 2, 0] }");
-    let e = find(&d, "E222");
-    assert!(e.2.contains("on: table, at: [0.2, -0.1]"), "{e:?}");
+    // three numbers for 'at' together with a relation: the relation decides the height
+    let c = ok("box t { }\nsphere s { radius: 0.1, on: t, at: [0.2, 9, -0.1] }");
+    let (mn, mx) = bounds(&c, "s");
+    assert!(close(mn.y, 1.0) && close((mn.x + mx.x) * 0.5, 0.2) && close((mn.z + mx.z) * 0.5, -0.1));
+    let d = codes("box t { }\nsphere s { radius: 0.1, on: t, at: [0.2, 9, -0.1] }");
+    assert!(find(&d, "W343").2.contains("at: [0.2, -0.1]"), "{d:?}");
+    // something that is not a position at all is still an error
+    let d = codes("box t { }\nsphere s { on: t, at: 3 }");
+    assert!(find(&d, "E222").2.contains("on: table, at: [0.2, -0.1]"), "{d:?}");
 
     let d = codes("sphere s { radius: -1 }\nbox b { size: [1, 0, 1] }\nsphere q { material: 5 }\nsphere r { material: #ff0000 }");
     assert!(find(&d, "E205").1.contains("must be between"));
@@ -227,21 +244,26 @@ fn diagnostics_for_typical_mistakes_name_the_fix() {
     assert!(find(&d, "E207").2.contains("did you mean 'seed'?"));
 
     // option words and kind words work unquoted; misuse is explained
+    let d = codes("render { exposure: auto, tonemap: filmic }\nlight l { shape: disk, at: [0, 2, 0], size: [1, 1] }");
+    assert!(d.len() == 1 && find(&d, "W311").1.contains("'size' has no effect on a disk light"), "{d:?}");
+    // while there is an error only errors are shown: the warning above waits its turn
     let d = codes("render { exposure: auto, tonemap: filmic }\nlight l { shape: disk, at: [0, 2, 0], size: [1, 1] }\nsphere s { on: box }");
-    assert!(!d.iter().any(|x| x.0 == "E201"), "{d:?}");
-    assert!(find(&d, "W311").1.contains("'size' has no effect on a disk light"));
-    assert!(find(&d, "E204").2.contains("give the object a name"), "{d:?}");
+    assert!(d.len() == 1 && find(&d, "E204").2.contains("give the object a name"), "{d:?}");
     // a failed property does not trigger follow-on complaints
     let d = codes("light l { shape: rekt, at: [0, 2, 0], size: [1, 1] }");
-    assert_eq!(d.len(), 1, "{d:?}");
-    assert!(d[0].0 == "E201" && d[0].1.contains("'rekt'") && d[0].2.contains("did you mean 'rect'?"), "{d:?}");
+    assert!(d.len() == 1 && d[0].0 == "W346" && d[0].1.contains("read as 'rect'"), "a near miss is read as intended: {d:?}");
+    let d = codes("light l { shape: blob, at: [0, 2, 0], size: [1, 1] }");
+    assert!(d.len() == 1 && d[0].0 == "E205" && d[0].2.contains("sphere (bulb), a rect (panel"), "the property explains its own vocabulary: {d:?}");
+    let d = codes("render { tonemap: vivid }\nsphere s { }");
+    assert!(d.len() == 1 && d[0].0.starts_with('E') && !d[0].2.contains("object created earlier"), "{d:?}");
     let d = codes("light l { shape: \"oval\", at: [0, 2, 0] }");
     assert!(d.len() == 1 && d[0].0 == "E205" && d[0].2.contains("sphere (bulb), a rect (panel"), "{d:?}");
 
     let d = codes("sphere s { radius: 0.1, on: 0, above: 1 }\nsphere s { }\nmaterial { color: red }");
     assert!(d.iter().any(|x| x.0 == "E221"));
-    assert!(d.iter().any(|x| x.0 == "W301" && x.1.contains("'s_2'")));
     assert!(d.iter().any(|x| x.0 == "E234"));
+    let d = codes("sphere s { radius: 0.1 }\nsphere s { radius: 0.1, at: [1, 0] }");
+    assert!(d.iter().any(|x| x.0 == "W301" && x.1.contains("'s_2'")), "{d:?}");
 
     let d = codes("plane ground { }\nsphere s { radius: 0.5, at: [0, 0.2, 0] }\nbox a { size: 1, at: [3, 0.5, 0] }\nbox b { size: 1, at: [3.2, 0.5, 0] }\nenvironment { strength: 0 }");
     assert!(find(&d, "W321").1.contains("'s' extends 0.30 m below the surface of 'ground'"));
@@ -258,11 +280,11 @@ fn diagnostics_for_typical_mistakes_name_the_fix() {
 
 #[test]
 fn errors_do_not_trigger_follow_on_warnings() {
-    // Two typos leave the ball at its default size and position, inside the table. Reporting that
-    // as an overlap would point the author at a consequence instead of the cause.
-    let d = codes("plane ground { }\nbox table { size: [1.4, 0.75, 0.8] }\nsphere ball { raduis: 0.1, on: tabel }");
+    // Two mistakes leave the ball at its default size and position, inside the table. Reporting
+    // that as an overlap would point the author at a consequence instead of the cause.
+    let d = codes("plane ground { }\nbox table { size: [1.4, 0.75, 0.8] }\nsphere ball { radius: \"small\", on: shelf }");
     let got: Vec<&str> = d.iter().map(|x| x.0.as_str()).collect();
-    assert_eq!(got, ["E203", "E201"], "{d:?}");
+    assert_eq!(got, ["E204", "E201"], "{d:?}");
     // the same scene without the typos is clean, and a genuine overlap is still reported
     assert!(codes("plane ground { }\nbox table { size: [1.4, 0.75, 0.8] }\nsphere ball { radius: 0.1, on: table }").is_empty());
     let d = codes("plane ground { }\nbox table { size: [1.4, 0.75, 0.8] }\nsphere ball { radius: 0.5 }");
@@ -274,8 +296,8 @@ fn errors_do_not_trigger_follow_on_warnings() {
 
 #[test]
 fn errors_never_produce_a_scene_and_warnings_do_not_block_one() {
-    let c = compile("t", "sphere s { radius: 0.5 }\nbox b { sizee: 1 }");
-    assert!(c.scene.is_none() && c.error_count() == 1);
+    let c = compile("t", "sphere s { radius: 0.5 }\nbox b { size: \"big\" }");
+    assert!(c.scene.is_none() && c.error_count() == 1, "{:?}", c.diags);
     assert_eq!(c.objects.len(), 2, "objects are still reported for the parts that worked");
     let c = compile("t", "plane ground { }\nsphere s { radius: 0.5, at: [0, 3, 0] }");
     assert!(c.scene.is_some() && c.error_count() == 0 && c.warning_count() == 1);
@@ -311,4 +333,106 @@ fn hostile_and_random_input_never_panics() {
             assert!(c.error_count() > 0, "no scene and no error for: {src}");
         }
     }
+}
+
+/// Programs written by small language models in the first experiment (run 43587377319),
+/// kept byte for byte. Each failed to compile at the time; the comments say why, and what
+/// the language now does instead. These are the most valuable test data in the project:
+/// they are what the intended user of the language actually writes.
+#[test]
+fn programs_written_by_small_models_compile() {
+    let load = |name: &str| std::fs::read_to_string(format!("{}/tests/data/llm/{name}.vl", env!("CARGO_MANIFEST_DIR"))).unwrap();
+    let warn_codes = |c: &vl_lang::Compiled| c.diags.iter().map(|d| d.code.to_string()).collect::<Vec<_>>();
+
+    // "light sky { sun_elevation: 40, sun_azimuth: 135 }": the sun written as a lamp
+    let c = ok(&load("qwen3b_desk_round0"));
+    assert_eq!(warn_codes(&c), ["W347"]);
+    let Env::Sky(sky) = &c.scene.as_ref().unwrap().env else { panic!("the block was read as the sky") };
+    assert!(sky.sun_strength == 1.0 && (sky.sun_dir.y - 40f32.to_radians().sin()).abs() < 1e-4, "daylight at 40 degrees, not night");
+
+    // "material: snow" and "color: dark" were unknown words
+    let c = ok(&load("qwen3b_snowman_round0"));
+    assert!(!warn_codes(&c).iter().any(|w| w.starts_with("W34")), "nothing had to be guessed: {:?}", c.diags);
+    let (b1, b2, b3) = (bounds(&c, "ball1"), bounds(&c, "ball2"), bounds(&c, "ball3"));
+    assert!(close(b1.0.y, 0.0) && close(b2.0.y, b1.1.y) && close(b3.0.y, b2.1.y), "three balls stacked on the ground");
+
+    // "on: ground, at: [-0.5, 0.4, 0.3]" and "light environment { strength: 500 }"
+    let c = ok(&load("qwen3b_night-room_round0"));
+    assert!(warn_codes(&c).contains(&"W343".to_string()));
+    let sofa = bounds(&c, "sofa");
+    assert!(close(sofa.0.y, 0.0) && close((sofa.0.x + sofa.1.x) * 0.5, -0.5) && close((sofa.0.z + sofa.1.z) * 0.5, 0.3));
+    // it has a lamp and says nothing about the sky, so the lamp lights it
+    let Env::Sky(sky) = &c.scene.as_ref().unwrap().env else { panic!() };
+    assert!(sky.sun_strength < 1e-4, "night");
+
+    // "material: white", "material: black" and "eye1 { at: ... }" for an object that exists
+    let c = ok(&load("qwen1_5b_snowman_round0"));
+    let w = warn_codes(&c);
+    assert!(w.contains(&"W342".to_string()) && w.contains(&"W344".to_string()), "{w:?}");
+
+    // What is still beyond repair: a reply cut off in the middle of a statement, and
+    // invented syntax ("let snow = material { ... }"). Both must stay errors.
+    for name in ["gptoss20b_desk_round0", "qwen3b_snowman_round1", "qwen1_5b_snowman_round1"] {
+        let c = compile(name, &load(name));
+        assert!(c.scene.is_none() && c.error_count() >= 1, "{name}");
+        assert!(c.diags.iter().all(|d| d.severity == vl_core::diag::Severity::Error), "{name}: only errors are shown while there are errors");
+    }
+    // nine copies of one mistake are one message
+    let c = compile("t", "sphere a { on: zzz }\nsphere b { on: zzz }\nsphere c { on: zzz }");
+    assert_eq!(c.diags.len(), 1);
+    assert!(c.diags[0].message.ends_with("(also on lines 2, 3)"), "{}", c.diags[0].message);
+}
+
+#[test]
+fn words_for_light_and_time_of_day() {
+    let env = |src: &str| ok(src).scene.unwrap().env;
+    let sun_up = |e: &Env| match e {
+        Env::Sky(s) => (s.sun_dir.y, s.sun_strength),
+        _ => panic!("not a sky"),
+    };
+    // no lamps, nothing said: daylight
+    let (y, k) = sun_up(&env("sphere s { }"));
+    assert!(y > 0.5 && k == 1.0);
+    // a lamp and nothing said about the sky: the lamp lights the scene
+    let (_, k) = sun_up(&env("sphere s { }\nlight l { at: [0, 2, 0] }"));
+    assert!(k == vl_lang::lower::NIGHT_SCALE);
+    // a lamp and a sky statement: daylight, as asked
+    let (_, k) = sun_up(&env("sky { }\nsphere s { }\nlight l { at: [0, 2, 0] }"));
+    assert!(k == 1.0);
+    // one word for the time of day; explicit numbers win over it
+    assert!(sun_up(&env("sky { time: sunset }")).0 < 0.06);
+    assert!(sun_up(&env("sky { time: noon }")).0 > 0.85);
+    assert!((sun_up(&env("sky { time: sunset, sun_elevation: 30 }")).0 - 0.5).abs() < 1e-4);
+    let (_, k) = sun_up(&env("sky { time: night }"));
+    assert!(k == vl_lang::lower::NIGHT_SCALE);
+    assert!(matches!(env("sky { time: overcast }"), Env::Gradient { .. }));
+    // moonlight alone is held two stops under so that night looks like night
+    assert_eq!(ok("sky { time: night }").scene.unwrap().post.exposure_bias, -2.0);
+    assert_eq!(ok("sky { time: night }\nlight l { at: [0, 2, 0] }").scene.unwrap().post.exposure_bias, 0.0);
+    // the sun as its own block, and an unknown word
+    assert!(sun_up(&env("sun { elevation: 10 }")).0 < 0.2);
+    let d = codes("sky { time: teatime }");
+    assert!(d.len() == 1 && d[0].0 == "W348", "{d:?}");
+}
+
+#[test]
+fn every_css_colour_and_material_word_is_understood() {
+    for (name, _) in vl_core::color::NAMED {
+        let d = codes(&format!("sphere s {{ color: {name} }}"));
+        assert!(d.is_empty(), "colour '{name}': {d:?}");
+    }
+    assert!(codes("plane ground { }\nsphere s { color: dark_red }\nsphere t { color: LightGrey, at: [2, 0] }").is_empty(), "case and underscores are ignored");
+    for (alias, _) in vl_lang::presets::ALIASES {
+        let d = codes(&format!("sphere s {{ material: {alias} }}"));
+        assert!(d.is_empty(), "material word '{alias}': {d:?}");
+    }
+    // unknown words are warnings that say what was used instead
+    let d = codes("sphere s { color: blurple }");
+    assert!(d.len() == 1 && d[0].0 == "W340" && d[0].1.contains("read as 'purple'"), "{d:?}");
+    let d = codes("sphere s { color: zzqx }");
+    assert!(d.len() == 1 && d[0].0 == "W340" && d[0].1.contains("grey was used"), "{d:?}");
+    let d = codes("sphere s { material: wod }");
+    assert!(d.len() == 1 && d[0].0 == "W341" && d[0].1.contains("read as 'wood'"), "{d:?}");
+    let d = codes("sphere s { material: unobtainium }");
+    assert!(d.len() == 1 && d[0].0 == "W341" && d[0].1.contains("plain surface") && d[0].2.contains("snow"), "{d:?}");
 }

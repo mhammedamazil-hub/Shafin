@@ -7,7 +7,7 @@ use crate::value::*;
 use std::collections::HashMap;
 use std::rc::Rc;
 use vl_core::color;
-use vl_core::diag::{suggest, Span};
+use vl_core::diag::{suggest, suggest_unique, Span};
 use vl_core::math::{vec3, Aabb, Mat4, Vec3};
 use vl_ir::scene::{Shape, Tonemap};
 
@@ -21,8 +21,28 @@ pub const MATERIAL_PROPS: &[&str] = &[
 pub const LIGHT_PROPS: &[&str] = &["shape", "radius", "size", "width", "depth", "power", "brightness", "color", "temperature", "aim", "visible", "at", "on", "above", "below", "left_of", "right_of", "in_front_of", "behind", "gap", "rotate"];
 pub const RENDER_PROPS: &[&str] = &["size", "width", "height", "samples", "max_depth", "seed", "exposure", "exposure_bias", "white_balance", "saturation", "contrast", "tonemap", "noise_target", "caustics"];
 pub const CAMERA_PROPS: &[&str] = &["look_at", "from", "distance", "azimuth", "elevation", "fov", "focal_length", "f_stop", "focus", "blades"];
-pub const SKY_PROPS: &[&str] = &["sun_elevation", "sun_azimuth", "turbidity", "sun_size", "strength", "sun_strength", "sky_strength", "ground"];
+pub const SKY_PROPS: &[&str] = &["time", "sun_elevation", "sun_azimuth", "turbidity", "sun_size", "strength", "sun_strength", "sky_strength", "ground"];
 pub const ENVIRONMENT_PROPS: &[&str] = &["color", "strength", "top", "horizon", "bottom"];
+
+/// Property names the getters accept besides the documented ones.
+pub const ALIAS_PROPS: &[&str] = &[
+    "look_at", "ground", "base_color", "aperture", "position", "ground_color", "target", "bounces", "spp", "resolution", "brightness", "azimuth", "elevation", "time_of_day", "weather", "zenith", "thickness", "haze",
+    "preset",
+];
+
+/// Documented properties of a built-in kind; empty for kinds made with `define`.
+pub fn known_props(kind: &str) -> Vec<&'static str> {
+    match kind {
+        "material" => MATERIAL_PROPS.to_vec(),
+        "light" => LIGHT_PROPS.to_vec(),
+        "render" => RENDER_PROPS.to_vec(),
+        "camera" => CAMERA_PROPS.to_vec(),
+        "sky" => SKY_PROPS.to_vec(),
+        "environment" => ENVIRONMENT_PROPS.to_vec(),
+        k if OBJECT_KINDS.iter().any(|x| x.0 == k) => shape_props(k).iter().chain(COMMON_OBJECT_PROPS).chain(PLACEMENT_PROPS).copied().collect(),
+        _ => Vec::new(),
+    }
+}
 
 pub fn shape_props(kind: &str) -> &'static [&'static str] {
     match kind {
@@ -103,6 +123,13 @@ impl Ev {
                         } else {
                             self.error("E204", aspan, "'at' must contain numbers", "write  at: [dx, dz]");
                         }
+                    }
+                    Some((Value::Vec3(v), aspan)) => {
+                        // [x, y, z] together with a relation: the relation decides the height,
+                        // so the middle number is dropped and the picture can still be made
+                        p.x += v.x;
+                        p.z += v.z;
+                        self.warn("W343", aspan, format!("'at' has three numbers but '{rel}' already decides the height; the middle number was ignored"), format!("write  at: [{}, {}]", v.x, v.z));
                     }
                     Some((_, aspan)) => {
                         self.error("E222", aspan, format!("with '{rel}', 'at' must be a two-number offset [dx, dz] from the centre of the target"), format!("write for example  {rel}: table, at: [0.2, -0.1]   (the height comes from '{rel}')"));
@@ -209,13 +236,16 @@ impl Ev {
                 Some(i) => Some(i),
                 None => {
                     let names: Vec<String> = self.mat_names.keys().cloned().chain(presets::preset_names().map(String::from)).collect();
-                    let hint = match suggest(s, names.iter().map(|x| x.as_str())) {
-                        Some(sg) => format!("did you mean '{sg}'?"),
-                        None if color::named(s).is_some() || color::parse_hex(s).is_some() => format!("'{s}' is a colour; write  color: {s}  (optionally with  material: plastic)"),
-                        None => format!("material presets: {}", presets::preset_names().collect::<Vec<_>>().join(", ")),
-                    };
-                    self.error("E205", span, format!("'{s}' is not a material"), hint);
-                    None
+                    match suggest(s, names.iter().map(|x| x.as_str())).map(String::from) {
+                        Some(sg) => {
+                            self.warn("W341", span, format!("there is no material '{s}'; it was read as '{sg}'"), format!("write  material: {sg}"));
+                            self.named_material(&sg)
+                        }
+                        None => {
+                            self.warn("W341", span, format!("there is no material '{s}'; a plain surface was used instead"), format!("choose one of: {}", presets::preset_names().collect::<Vec<_>>().join(", ")));
+                            None
+                        }
+                    }
                 }
             },
             Value::Vec3(_) => {
@@ -325,8 +355,17 @@ impl Ev {
 
     /// Material for an object from its `material:` and `color:` properties.
     fn object_material(&mut self, props: &mut Props, path: &str) -> usize {
-        let mat = props.take(&["material"]);
-        let tint = self.color(props, &["color"]);
+        let mut mat = props.take(&["material"]);
+        let mut tint = self.color(props, &["color"]);
+        if let Some((Value::Str(w), mspan)) = &mat {
+            if !self.mat_names.contains_key(w.as_str()) && presets::canonical(w).is_none() {
+                if let Some(c) = color::named(w).or_else(|| color::parse_hex(w).map(|x| x.0)) {
+                    self.warn("W342", *mspan, format!("'{w}' is a colour, not a material; it was used as the colour"), format!("write  color: {w}"));
+                    tint = tint.or(Some(c));
+                    mat = None;
+                }
+            }
+        }
         // a preset combined with a colour is rebuilt with that tint, so textured presets take it properly
         if let (Some((Value::Str(s), _)), Some(t)) = (&mat, tint) {
             if !self.mat_names.contains_key(s.as_str()) || presets::preset(s, None).is_some() {
@@ -375,9 +414,19 @@ impl Ev {
             "floor" | "ground" => "plane",
             "settings" | "output" | "image" => "render",
             "background" | "env" => "environment",
-            "lamp" => "light",
+            "lamp" | "bulb" | "spotlight" | "pointlight" | "point_light" | "area_light" => "light",
+            "sun" | "sunlight" | "daylight" => "sky",
             k => k,
         };
+        // a "light" that only talks about the sun is the sky block under another name
+        if kind_l == "light" {
+            let sunny = |k: &str| matches!(k, "sun_elevation" | "sun_azimuth" | "turbidity" | "elevation" | "azimuth" | "time");
+            let keys: Vec<&str> = body.iter().filter_map(|it| if let Item::Prop { key, .. } = it { Some(key.as_str()) } else { None }).collect();
+            if keys.iter().any(|k| sunny(k)) && !keys.iter().any(|k| matches!(*k, "at" | "position" | "on" | "above" | "shape")) {
+                self.warn("W347", kind_span, "this block describes the sun, which belongs to the sky, not to a lamp; it was read as  sky { ... }", "write  sky { sun_elevation: 40, sun_azimuth: 135 }  as its own statement");
+                return self.sky_block(body);
+            }
+        }
         match kind_l {
             "render" => self.render_block(body),
             "camera" => self.camera_block(body, span),
@@ -387,6 +436,9 @@ impl Ev {
             "light" => self.light_block(name, body, span),
             "group" => self.group_block(name, body, span),
             k if OBJECT_KINDS.iter().any(|x| x.0 == k) => self.object_block(k, name, body, span),
+            _ if matches!(self.try_lookup(kind), Some(Value::Object(_))) => {
+                self.warn("W344", kind_span, format!("'{kind}' is an object that already exists, not a kind of object; this statement was ignored because an object cannot be changed after it is made"), format!("delete this statement and put these properties in the line that creates '{kind}'"));
+            }
             _ => {
                 let mut all: Vec<String> = OBJECT_KINDS.iter().map(|k| k.0.to_string()).chain(OTHER_KINDS.iter().map(|s| s.to_string())).collect();
                 all.extend(self.defines.keys().cloned());
@@ -577,14 +629,20 @@ impl Ev {
         let shape_name = match props.take(&["shape"]) {
             None => "sphere".to_string(),
             Some((Value::Str(s), sspan)) => {
-                if ["sphere", "rect", "disk"].contains(&s.as_str()) {
-                    s
+                // other words for the three shapes a light can have
+                let word = match s.as_str() {
+                    "bulb" | "point" | "ball" | "round" | "omni" => "sphere",
+                    "panel" | "window" | "area" | "rectangle" | "square" | "quad" | "box" | "softbox" | "plane" => "rect",
+                    "spot" | "disc" | "circle" | "spotlight" => "disk",
+                    w => w,
+                };
+                if ["sphere", "rect", "disk"].contains(&word) {
+                    word.to_string()
+                } else if let Some(x) = suggest_unique(word, ["sphere", "rect", "disk"], 2) {
+                    self.warn("W346", sspan, format!("unknown name '{s}'; it was read as '{x}'"), format!("write  {x}"));
+                    x.to_string()
                 } else {
-                    let hint = match suggest(&s, ["sphere", "rect", "disk"]) {
-                        Some(x) => format!("did you mean '{x}'?"),
-                        None => "a light is a sphere (bulb), a rect (panel, window) or a disk (spot)".to_string(),
-                    };
-                    self.error("E205", sspan, format!("a light cannot have the shape '{s}'"), hint);
+                    self.error("E205", sspan, format!("a light cannot have the shape '{s}'"), "a light is a sphere (bulb), a rect (panel, window) or a disk (spot)");
                     "sphere".to_string()
                 }
             }
@@ -744,16 +802,40 @@ impl Ev {
         self.scopes.push(HashMap::new());
         let mut props = self.props("sky", body, false);
         self.scopes.pop();
-        let elevation = self.num(&mut props, &["sun_elevation", "elevation"], 40.0, -90.0, 90.0);
+        // time of day in one word; explicit numbers below override what it sets
+        let (mut el0, mut turb0, mut night, mut overcast) = (40.0, 3.0, false, false);
+        if let Some((v, span)) = props.take(&["time", "time_of_day", "weather"]) {
+            let word = match &v {
+                Value::Str(w) => w.to_ascii_lowercase(),
+                _ => String::new(),
+            };
+            match word.as_str() {
+                "noon" | "midday" | "day" | "daytime" | "sunny" | "clear" => el0 = 62.0,
+                "morning" => el0 = 24.0,
+                "afternoon" => el0 = 32.0,
+                "evening" | "golden_hour" | "late_afternoon" => (el0, turb0) = (9.0, 3.5),
+                "sunset" | "sunrise" | "dawn" | "dusk" => (el0, turb0) = (2.5, 4.0),
+                "night" | "midnight" | "moonlight" | "moonlit" | "dark" => (el0, night) = (38.0, true),
+                "overcast" | "cloudy" | "grey" | "gray" => overcast = true,
+                _ => self.warn("W348", span, "the time of day was not understood; daylight was used", "write one of: morning, noon, afternoon, evening, sunset, night, overcast"),
+            }
+        }
+        let elevation = self.num(&mut props, &["sun_elevation", "elevation"], el0, -90.0, 90.0);
         let azimuth = self.num(&mut props, &["sun_azimuth", "azimuth"], 135.0, -3600.0, 3600.0);
-        let turbidity = self.num(&mut props, &["turbidity", "haze"], 3.0, 1.0, 10.0);
+        let turbidity = self.num(&mut props, &["turbidity", "haze"], turb0, 1.0, 10.0);
         let sun_size = self.num(&mut props, &["sun_size"], 1.0, 0.1, 100.0);
         let strength = self.num(&mut props, &["strength"], 1.0, 0.0, 1000.0);
         let sun_strength = self.num(&mut props, &["sun_strength"], 1.0, 0.0, 1000.0) * strength;
         let sky_strength = self.num(&mut props, &["sky_strength"], 1.0, 0.0, 1000.0) * strength;
         let ground = self.color(&mut props, &["ground", "ground_color"]).unwrap_or(Vec3::splat(0.25));
         self.finish("sky", props, SKY_PROPS);
-        self.env = Some(EnvSpec::Sky { elevation, azimuth, turbidity, sun_size, sun_strength, sky_strength, ground });
+        if overcast {
+            // CIE overcast sky: the zenith is three times as bright as the horizon; about 10 klx
+            let s = sky_strength as f32;
+            self.env = Some(EnvSpec::Gradient { top: Vec3::splat(4000.0 * s), horizon: Vec3::splat(1400.0 * s), bottom: ground * (1400.0 * s) });
+            return;
+        }
+        self.env = Some(EnvSpec::Sky { elevation, azimuth, turbidity, sun_size, sun_strength, sky_strength, ground, night });
     }
 
     fn environment_block(&mut self, body: &[Item]) {

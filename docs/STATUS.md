@@ -50,7 +50,24 @@ everywhere. 85 tests pass (`cargo test --release`).
 
 ## 4K render
 
-PENDING_4K
+One run, one scene: `examples/still_life.vl` (12 objects; procedural wood and concrete, glass,
+gold, depth of field) at **3840x2160, 64 samples per pixel**, on the development sandbox
+(2 vCPUs, 3.9 GB RAM, no GPU):
+
+| | |
+|---|---|
+| Render time | 1125.7 s |
+| Wall-clock time including PNG encoding | 18.8 min |
+| Peak resident memory (kernel high-water mark, `tools/dev/measure.sh`) | 534 MB |
+| Output | 10.6 MB PNG; decodes as 3840x2160 RGB with an independent decoder (Pillow) |
+
+No denoising was applied; a few bright noise specks are visible in the glass at full size.
+The 4K file itself is not in the repository (it was written to the ignored `out/` folder);
+`docs/images/still_life_from_4k_1280.png` is a downscale of it and
+`docs/images/still_life_4k_crop_1to1.png` is an unscaled 1024x576 crop. The wood preset was
+improved after this run, so the committed program now renders a somewhat different table.
+At full resolution the glass and metal are convincing; the image as a whole is a clean
+computer-graphics render, not a photograph.
 
 ## Language-model experiment
 

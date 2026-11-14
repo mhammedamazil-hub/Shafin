@@ -127,6 +127,9 @@ impl LightShape {
     }
 }
 
+/// Share of light choices made uniformly rather than by estimated strength.
+const UNIFORM_SHARE: f32 = 0.15;
+
 impl SceneRt<'_> {
     fn sun_weight(&self) -> f32 {
         self.sky.as_ref().map(|s| luminance(s.sun_illuminance)).unwrap_or(0.0)
@@ -147,6 +150,24 @@ impl SceneRt<'_> {
         t
     }
 
+    /// Number of things `sample_light` chooses between: the lamps, plus the sun if there is one.
+    #[inline]
+    fn light_choices(&self) -> f32 {
+        (self.lights.len() + usize::from(self.sun_weight() > 0.0)) as f32
+    }
+
+    /// Probability of choosing a light whose weight at the shaded point is `w`.
+    ///
+    /// Mostly proportional to the weight (unoccluded power over distance squared), with a
+    /// uniform share mixed in. The weight knows nothing about shadows: in the shadow of a
+    /// strong lamp a weak light may be the only one that arrives, and choosing it one time
+    /// in ten thousand turns its contribution into scattered bright pixels. The uniform
+    /// share bounds how rarely any light can be chosen.
+    #[inline]
+    fn choice_prob(&self, w: f32, total: f32) -> f32 {
+        (1.0 - UNIFORM_SHARE) * w / total + UNIFORM_SHARE / self.light_choices()
+    }
+
     /// Choose one light for the point `p` and sample a direction towards it.
     pub fn sample_light(&self, p: Vec3, u: [f32; 3], scratch: &mut Scratch) -> Option<LightSample> {
         let sun_w = self.sun_weight();
@@ -154,8 +175,37 @@ impl SceneRt<'_> {
         if !(total > 0.0) {
             return None;
         }
-        let mut x = u[0] * total;
-        if x < sun_w {
+        let n = self.lights.len();
+        // index of the choice: 0 = the sun (when present), then the lamps
+        let has_sun = sun_w > 0.0;
+        let choice = if u[0] < UNIFORM_SHARE {
+            (((u[0] / UNIFORM_SHARE) * self.light_choices()) as usize).min(n + usize::from(has_sun) - 1)
+        } else {
+            let mut x = (u[0] - UNIFORM_SHARE) / (1.0 - UNIFORM_SHARE) * total;
+            let mut c = 0usize;
+            if has_sun {
+                if x < sun_w {
+                    c = usize::MAX;
+                } else {
+                    x -= sun_w;
+                }
+            }
+            if c == usize::MAX {
+                0
+            } else {
+                let mut picked = n.saturating_sub(1);
+                for i in 0..n {
+                    let w = self.light_weight(i, p);
+                    if x < w {
+                        picked = i;
+                        break;
+                    }
+                    x -= w;
+                }
+                picked + usize::from(has_sun)
+            }
+        };
+        if has_sun && choice == 0 {
             let sky = self.sky.as_ref()?;
             let omc = sky.sun_solid_angle / dmath::TAU32;
             let k = u[1] * omc;
@@ -163,20 +213,16 @@ impl SceneRt<'_> {
             let (sp, cp) = dmath::sincos(dmath::TAU32 * u[2]);
             let (t1, t2) = onb(sky.sun_dir);
             let wi = (t1 * (st * cp) + t2 * (st * sp) + sky.sun_dir * (1.0 - k)).normalize();
-            return Some(LightSample { wi, dist: f32::MAX, le: sky.sun_radiance, pdf: (sun_w / total) / sky.sun_solid_angle, obj: u32::MAX });
+            return Some(LightSample { wi, dist: f32::MAX, le: sky.sun_radiance, pdf: self.choice_prob(sun_w, total) / sky.sun_solid_angle, obj: u32::MAX });
         }
-        x -= sun_w;
-        let n = self.lights.len();
-        for i in 0..n {
-            let w = self.light_weight(i, p);
-            if x < w || i + 1 == n {
-                let (wi, dist, pdf) = self.lights[i].shape.sample(p, u[1], u[2])?;
-                let le = self.emission_at(self.lights[i].obj, p + wi * dist, scratch);
-                return Some(LightSample { wi, dist, le, pdf: pdf * (w / total), obj: self.lights[i].obj });
-            }
-            x -= w;
+        let i = choice - usize::from(has_sun);
+        if i >= n {
+            return None;
         }
-        None
+        let w = self.light_weight(i, p);
+        let (wi, dist, pdf) = self.lights[i].shape.sample(p, u[1], u[2])?;
+        let le = self.emission_at(self.lights[i].obj, p + wi * dist, scratch);
+        Some(LightSample { wi, dist, le, pdf: pdf * self.choice_prob(w, total), obj: self.lights[i].obj })
     }
 
     /// Density with which `sample_light` at `p` would have produced direction `wi` hitting light `light`.
@@ -185,13 +231,13 @@ impl SceneRt<'_> {
         if !(total > 0.0) {
             return 0.0;
         }
-        self.lights[light].shape.pdf(p, wi, dist, n_hit) * self.light_weight(light, p) / total
+        self.lights[light].shape.pdf(p, wi, dist, n_hit) * self.choice_prob(self.light_weight(light, p), total)
     }
 
     fn sun_pdf(&self, p: Vec3) -> f32 {
         let total = self.total_light_weight(p);
         match &self.sky {
-            Some(s) if total > 0.0 => (self.sun_weight() / total) / s.sun_solid_angle,
+            Some(s) if total > 0.0 && self.sun_weight() > 0.0 => self.choice_prob(self.sun_weight(), total) / s.sun_solid_angle,
             _ => 0.0,
         }
     }

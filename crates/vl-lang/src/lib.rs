@@ -64,9 +64,43 @@ pub fn compile(name: &str, text: &str) -> Compiled {
     diags.sort_by_key(|d| (d.span.start, d.severity != diag::Severity::Error));
     diags.dedup_by(|a, b| a.code == b.code && a.span == b.span && a.message == b.message);
     let failed = syntax_errors || diag::has_errors(&diags);
+    // While there are errors, only errors are reported: a writer who is shown a warning
+    // first fixes the warning and leaves the errors (observed with a 3B model).
+    if failed {
+        diags.retain(|d| d.severity == diag::Severity::Error);
+    }
+    // The same mistake on many lines is reported once, with the other lines listed.
+    let diags = merge_repeats(diags, &source);
     match lowered {
         Some(l) if !failed => Compiled { source, diags, scene: Some(l.scene), objects: l.objects },
         Some(l) => Compiled { source, diags, scene: None, objects: l.objects },
         None => Compiled { source, diags, scene: None, objects: Vec::new() },
     }
+}
+
+/// Collapse diagnostics that have the same code and message into the first one, naming the
+/// other lines. Nine copies of "unknown name 'snow'" cost a small model a minute to read
+/// and bury the other problems.
+fn merge_repeats(diags: Vec<Diag>, source: &Source) -> Vec<Diag> {
+    let mut out: Vec<Diag> = Vec::new();
+    let mut extra: Vec<Vec<usize>> = Vec::new();
+    for d in diags {
+        match out.iter().position(|o| o.code == d.code && o.message == d.message && o.severity == d.severity) {
+            Some(i) => extra[i].push(source.line_col(d.span.start).0),
+            None => {
+                out.push(d);
+                extra.push(Vec::new());
+            }
+        }
+    }
+    for (d, lines) in out.iter_mut().zip(extra) {
+        if !lines.is_empty() {
+            let mut lines = lines;
+            lines.dedup();
+            let shown: Vec<String> = lines.iter().take(8).map(|l| l.to_string()).collect();
+            let more = if lines.len() > 8 { ", ..." } else { "" };
+            d.message = format!("{} (also on line{} {}{more})", d.message, if lines.len() == 1 { "" } else { "s" }, shown.join(", "));
+        }
+    }
+    out
 }

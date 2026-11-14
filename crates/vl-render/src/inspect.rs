@@ -198,6 +198,11 @@ pub fn inspect(scene: &Scene, threads: usize) -> Inspection {
         }
         subject_pct += o.image_pct;
         let name = Some(o.name.clone());
+        // A lamp that lights the scene from outside the picture, or from behind something,
+        // is how lamps are normally used. Reporting it sent a model off to "fix" a good scene.
+        if o.is_light && (!o.in_frame || o.image_pct == 0.0) {
+            continue;
+        }
         if !o.in_frame {
             findings.push(Finding { code: "V101", object: name, message: format!("'{}' is outside the picture: the camera does not see it at all", o.name), hint: format!("point the camera at it ( look_at: {} ), move it into view, or widen 'fov'", top_level(&o.name)) });
         } else if o.image_pct == 0.0 {

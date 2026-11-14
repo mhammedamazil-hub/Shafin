@@ -169,9 +169,55 @@ pub fn suggest<'a>(name: &str, candidates: impl IntoIterator<Item = &'a str>) ->
     best.map(|(c, _)| c)
 }
 
+/// The one candidate a misspelt word almost certainly stands for, or `None`.
+///
+/// Stricter than `suggest`: at most `max_dist` edits (and never more than a third of the
+/// word), and no other candidate equally close. Used where the compiler goes on to act on
+/// the correction instead of only proposing it.
+pub fn suggest_unique<'a>(name: &str, candidates: impl IntoIterator<Item = &'a str>, max_dist: usize) -> Option<&'a str> {
+    let lname = name.to_ascii_lowercase();
+    let mut best: Option<(&str, usize)> = None;
+    let mut tie = false;
+    for c in candidates {
+        let d = edit_distance(&lname, &c.to_ascii_lowercase());
+        let limit = (name.len().max(c.len()) / 3).max(1).min(max_dist);
+        if d == 0 || d > limit {
+            continue;
+        }
+        match best {
+            Some((b, bd)) if d == bd && b != c => tie = true,
+            Some((_, bd)) if d > bd => {}
+            Some((b, _)) if b == c => {}
+            _ => {
+                best = Some((c, d));
+                tie = false;
+            }
+        }
+    }
+    if tie {
+        None
+    } else {
+        best.map(|(c, _)| c)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unique_suggestions_refuse_to_guess_between_equals() {
+        assert_eq!(suggest_unique("tabel", ["table", "chair"], 2), Some("table"));
+        assert_eq!(suggest_unique("raduis", ["radius", "diameter"], 2), Some("radius"));
+        // two candidates one edit away: no basis for choosing
+        assert_eq!(suggest_unique("ball3", ["ball1", "ball2"], 2), None);
+        assert_eq!(suggest_unique("ball3", ["ball1", "ball1"], 2), Some("ball1"), "the same name twice is not a tie");
+        // too far, or exact
+        assert_eq!(suggest_unique("snow", ["wood", "stone"], 2), None);
+        assert_eq!(suggest_unique("table", ["table"], 2), None);
+        // short words allow one edit only
+        assert_eq!(suggest_unique("on", ["at"], 2), None);
+    }
 
     #[test]
     fn positions() {

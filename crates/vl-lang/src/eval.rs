@@ -14,7 +14,7 @@ use crate::value::*;
 use std::collections::HashMap;
 use std::rc::Rc;
 use vl_core::color;
-use vl_core::diag::{suggest, Diag, Span};
+use vl_core::diag::{suggest, suggest_unique, Diag, Span};
 use vl_core::math::{vec3, Aabb, Mat4, Vec3};
 use vl_ir::expr::{yields_scalar, Op};
 use vl_ir::scene::{Shape, Tonemap};
@@ -34,7 +34,33 @@ pub const OTHER_KINDS: &[&str] = &["render", "camera", "sky", "environment", "ma
 pub const PLACEMENT_PROPS: &[&str] = &["at", "on", "rotate", "scale", "left_of", "right_of", "in_front_of", "behind", "above", "below", "gap"];
 
 /// Words that select an option of some property (`exposure: auto`, `tonemap: filmic`, ...).
-pub const OPTION_WORDS: &[&str] = &["auto", "filmic", "reinhard", "linear", "none", "preview", "hd", "uhd", "fullhd"];
+/// Properties whose value is a word from a fixed vocabulary (material and colour names).
+pub const WORD_PROPS: &[&str] = &["material", "color", "emission", "absorb_color", "time", "time_of_day", "weather", "shape", "tonemap", "exposure"];
+
+/// The documented name of a property, given a spelling a writer may reach for instead.
+/// These are pure synonyms; nothing is reported when one is used.
+pub fn canonical_key<'a>(kind: &str, key: &'a str) -> &'a str {
+    match (kind, key) {
+        (_, "colour") => "color",
+        ("camera", "target" | "lookat" | "look" | "looking_at") => "look_at",
+        ("camera", "position" | "pos" | "eye" | "location") => "from",
+        ("light", "intensity" | "strength" | "lumens" | "watts") => "power",
+        ("light", "kelvin" | "color_temperature") => "temperature",
+        ("render", "resolution") => "size",
+        ("render", "spp") => "samples",
+        ("render" | "camera" | "sky" | "environment" | "material", _) => key,
+        (_, "position" | "pos" | "location" | "centre" | "center") => "at",
+        (_, "rotation") => "rotate",
+        _ => key,
+    }
+}
+
+pub const OPTION_WORDS: &[&str] = &[
+    "auto", "filmic", "reinhard", "linear", "none", "preview", "hd", "uhd", "fullhd",
+    // times of day for  sky { time: ... }
+    "noon", "midday", "day", "daytime", "sunny", "clear", "morning", "afternoon", "evening", "golden_hour", "late_afternoon",
+    "sunset", "sunrise", "dawn", "dusk", "night", "midnight", "moonlight", "moonlit", "overcast", "cloudy",
+];
 
 const MAX_STEPS: u64 = 2_000_000;
 const MAX_NODES: usize = 500_000;
@@ -91,7 +117,8 @@ pub struct CameraSpec {
 
 #[derive(Clone, Debug)]
 pub enum EnvSpec {
-    Sky { elevation: f64, azimuth: f64, turbidity: f64, sun_size: f64, sun_strength: f64, sky_strength: f64, ground: Vec3 },
+    /// `night`: the same sky model lit by a moon instead of the sun (see `lower`).
+    Sky { elevation: f64, azimuth: f64, turbidity: f64, sun_size: f64, sun_strength: f64, sky_strength: f64, ground: Vec3, night: bool },
     Uniform(Vec3),
     Gradient { top: Vec3, horizon: Vec3, bottom: Vec3 },
 }
@@ -258,7 +285,8 @@ impl Ev {
         v
     }
 
-    fn lookup(&mut self, name: &str, span: Span) -> Option<Value> {
+    /// What a name refers to, or `None`; reports nothing.
+    pub(crate) fn try_lookup(&self, name: &str) -> Option<Value> {
         for s in self.scopes.iter().rev() {
             if let Some(v) = s.get(name) {
                 return Some(v.clone());
@@ -283,13 +311,29 @@ impl Ev {
         // Preset names, colour names, kind names and option words are passed on as words; the
         // property that receives them decides what they mean. (So  shape: rect  and
         // exposure: auto  work without quotes, which is how they are naturally written.)
-        if presets::preset(name, None).is_some() || color::named(name).is_some() || OPTION_WORDS.contains(&name) || OBJECT_KINDS.iter().any(|k| k.0 == name) {
+        if presets::canonical(name).is_some() || color::named(name).is_some() || OPTION_WORDS.contains(&name) || OBJECT_KINDS.iter().any(|k| k.0 == name) {
             return Some(Value::Str(name.to_string()));
         }
+        None
+    }
+
+    fn lookup(&mut self, name: &str, span: Span) -> Option<Value> {
+        if let Some(v) = self.try_lookup(name) {
+            return Some(v);
+        }
         let names = self.all_names();
+        // a misspelling of exactly one existing name is read as that name
+        if let Some(sg) = suggest_unique(name, names.iter().map(|s| s.as_str()), 2).map(String::from) {
+            if let Some(v) = self.try_lookup(&sg) {
+                self.warn("W346", span, format!("unknown name '{name}'; it was read as '{sg}'"), format!("write  {sg}"));
+                return Some(v);
+            }
+        }
+        // The hint must not suggest code to paste: in the first experiment both small models
+        // copied "let name = value" literally and produced new syntax errors.
         let hint = match suggest(name, names.iter().map(|s| s.as_str())) {
             Some(s) => format!("did you mean '{s}'?"),
-            None => "define it first with  let name = value  or as an object  kind name { ... }; objects must be defined before they are referred to".to_string(),
+            None => format!("nothing called '{name}' exists above this line. Use the name of an object created earlier, or a number"),
         };
         self.error("E201", span, format!("unknown name '{name}'"), hint);
         None
@@ -727,11 +771,31 @@ impl Ev {
         for it in body {
             match it {
                 Item::Prop { key, key_span, value } => {
+                    let mut key = canonical_key(kind, key).to_string();
+                    // a misspelt property that can only mean one thing is read as that thing
+                    let known = crate::kinds::known_props(kind);
+                    if !known.is_empty() && !known.contains(&key.as_str()) && !crate::kinds::ALIAS_PROPS.contains(&key.as_str()) {
+                        if let Some(sg) = suggest_unique(&key, known.iter().copied(), 2) {
+                            let already = body.iter().any(|b| matches!(b, Item::Prop { key: k, .. } if canonical_key(kind, k) == sg));
+                            if !already {
+                                self.warn("W345", *key_span, format!("'{kind}' has no property '{key}'; it was read as '{sg}'"), format!("write  {sg}"));
+                                key = sg.to_string();
+                            }
+                        }
+                    }
+                    let key = &key;
                     if let Some(prev) = list.iter().position(|p| p.key == *key) {
                         self.warn("W302", *key_span, format!("property '{key}' is set twice; the last value is used"), "remove one of them");
                         list.remove(prev);
                     }
-                    match self.eval(value) {
+                    // A bare word given as a material or a colour is passed on as a word even
+                    // when nothing has that name: the property knows the vocabulary and can
+                    // say "there is no material 'snow'" instead of "unknown name".
+                    let v = match &value.kind {
+                        ExprKind::Ident(word) if WORD_PROPS.contains(&key.as_str()) && self.try_lookup(word).is_none() => Some(Value::Str(word.clone())),
+                        _ => self.eval(value),
+                    };
+                    match v {
                         Some(v) => list.push(Prop { key: key.clone(), key_span: *key_span, value: v, span: value.span, used: false }),
                         // the value failed to evaluate (already reported): the default applies
                         None => failed.push(key.clone()),
@@ -764,7 +828,7 @@ impl Ev {
                 None => String::new(),
             };
             hint.push_str(&format!("properties of {kind}: {}", known.join(", ")));
-            self.error("E203", p.key_span, format!("'{kind}' has no property '{}'", p.key), hint);
+            self.warn("W345", p.key_span, format!("'{kind}' has no property '{}'; it was ignored", p.key), hint);
         }
     }
 
@@ -830,12 +894,17 @@ impl Ev {
                 if let Some((c, _)) = color::parse_hex(s) {
                     return Some(c);
                 }
-                let hint = match suggest(s, color::NAMED.iter().map(|c| c.0)) {
-                    Some(sg) => format!("did you mean '{sg}'? Colours can also be written as #rrggbb or rgb(r, g, b)"),
-                    None => "write a colour as #rrggbb, rgb(r, g, b) with values 0..1, or a common colour name such as red, white, navy".to_string(),
-                };
-                self.error("E205", span, format!("'{s}' is not a colour"), hint);
-                None
+                // a near miss is read as the colour that was meant; anything else becomes grey
+                match suggest(s, color::NAMED.iter().map(|c| c.0)) {
+                    Some(sg) => {
+                        self.warn("W340", span, format!("there is no colour '{s}'; it was read as '{sg}'"), format!("write  {what}: {sg}"));
+                        color::named(sg)
+                    }
+                    None => {
+                        self.warn("W340", span, format!("there is no colour '{s}'; grey was used instead"), format!("write a colour name (red, white, navy, darkgreen ...) or  {what}: #rrggbb"));
+                        Some(Vec3::splat(0.2))
+                    }
+                }
             }
             Value::Material(i) => match &self.mats[*i].base {
                 PV::Const(c) => Some(*c),

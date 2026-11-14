@@ -51,12 +51,13 @@ Measurements of an object can be used as numbers:
 ## Colour and material
 
 ```
-color: #rrggbb            or a colour name (red, white, navy, ...) or rgb(r, g, b) with values 0..1
+color: #rrggbb            or a colour name (red, white, navy, darkgreen, ...) or rgb(r, g, b) with values 0..1
 material: wood            one of the presets below, or the name of a material you defined
 ```
 
-Presets: `matte plastic glossy rubber ceramic paper fabric leather glass frosted_glass water
-mirror chrome gold silver copper brass steel iron aluminium wood marble concrete stone`
+Presets: `matte plastic glossy rubber ceramic paper fabric leather glass frosted_glass water ice
+mirror chrome gold silver copper brass steel iron aluminium wood marble concrete stone brick
+plaster asphalt grass sand soil snow`
 
 A material of your own, and a procedural texture written with the surface position `P` (metres):
 
@@ -74,12 +75,15 @@ smoothstep(a, b, x) step(edge, x) fract floor sin cos abs min max clamp pow leng
 ## Light
 
 ```
-sky { sun_elevation: 40, sun_azimuth: 135 }        daylight; this is the default when nothing is written
-environment { color: white, strength: 500 }        even, soft light from all around instead of a sky
+sky { time: noon }                                 morning noon afternoon evening sunset night overcast
+sky { sun_elevation: 40, sun_azimuth: 135 }        or place the sun yourself
 light lamp { at: [0, 2, 0], power: 800, temperature: 2700 }                      a bulb; power in lumens
 light panel { shape: rect, size: [1, 0.5], at: [0, 2.4, 0], aim: table, power: 3000 }
+environment { color: white, strength: 500 }        even, soft light from all around instead of a sky
 ```
 
+What lights the scene when you write nothing about the sky: daylight if the scene has no `light`,
+and only the lamps (a night scene) if it has one. For daylight together with lamps write `sky { }`.
 Sun azimuth: 180 = behind the camera (front-lit scene), 90 = from the right, 270 = from the left,
 0 = in front of the camera (back-lit).
 

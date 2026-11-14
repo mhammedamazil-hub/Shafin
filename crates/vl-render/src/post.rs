@@ -35,6 +35,41 @@ pub fn auto_ev(colors: &[Vec3]) -> Option<f32> {
     Some(dmath::ln(l_avg / (KEY * 1.2)) / dmath::ln(2.0))
 }
 
+/// Exposure the way an incident-light meter sets it: from the light falling on the scene,
+/// not from the light coming off it.
+///
+/// A meter that averages what the camera sees turns a snowfield grey and a coal heap grey,
+/// because it assumes every scene reflects 18%. A renderer knows each surface's own colour,
+/// so it can do better: `radiance / albedo` at a surface is what a white card would look
+/// like there. The exposure puts a grey card in the better-lit half of the picture at middle
+/// grey, so white things come out white and dark things dark. The better-lit half is used
+/// (trimmed of its top 5%) because the subject of a picture is normally in the light, and a
+/// lamp-lit scene at night is mostly unlit ground.
+///
+/// Pixels showing sky, or surfaces with no colour of their own (black, or a light source),
+/// are not metered. If fewer than 1 pixel in 20 can be metered the average-luminance
+/// method is used instead.
+pub fn auto_ev_incident(colors: &[Vec3], albedo: &[Vec3], depth: &[f32]) -> Option<f32> {
+    let mut logs: Vec<f32> = Vec::with_capacity(colors.len());
+    for ((c, a), d) in colors.iter().zip(albedo).zip(depth) {
+        let (l, al) = (luminance(*c), luminance(*a));
+        if *d > 0.0 && al > 0.03 && l > 0.0 && l.is_finite() {
+            logs.push(dmath::ln(l / al.min(1.0)));
+        }
+    }
+    if logs.len() * 20 < colors.len() {
+        return auto_ev(colors);
+    }
+    logs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let (lo, hi) = (logs.len() / 2, (logs.len() * 19 / 20).max(logs.len() / 2 + 1));
+    let kept = &logs[lo..hi];
+    let mean = kept.iter().map(|&v| v as f64).sum::<f64>() / kept.len() as f64;
+    let white = dmath::exp(mean as f32);
+    // a grey card there has luminance KEY * white; it should land on KEY:
+    // scale = 1 / white  and  scale = 1 / (1.2 * 2^EV)
+    Some(dmath::ln(white / 1.2) / dmath::ln(2.0))
+}
+
 #[inline]
 fn filmic(x: f32) -> f32 {
     // Narkowicz' fit of the ACES reference rendering transform, with the customary 0.6 pre-scale
@@ -110,6 +145,20 @@ mod tests {
         // one stop more exposure value halves the image
         assert!((exposure_scale(10.0) / exposure_scale(11.0) - 2.0).abs() < 1e-4);
         assert!(auto_ev(&[Vec3::ZERO; 4]).is_none());
+        // incident metering: the same light on snow, on a grey card and on coal gives the
+        // same exposure, where the reflected-light meter differs by more than four stops
+        let lit = 20_000.0f32; // luminance of a white surface in this light
+        let scene = |albedo: f32| (vec![Vec3::splat(lit * albedo); 100], vec![Vec3::splat(albedo); 100], vec![1.0f32; 100]);
+        let evs: Vec<f32> = [0.9, 0.18, 0.04].iter().map(|&a| { let (c, al, d) = scene(a); auto_ev_incident(&c, &al, &d).unwrap() }).collect();
+        assert!((evs[0] - evs[1]).abs() < 1e-3 && (evs[1] - evs[2]).abs() < 1e-3, "{evs:?}");
+        let (snow, _, _) = scene(0.9);
+        let (coal, _, _) = scene(0.04);
+        assert!(auto_ev(&snow).unwrap() - auto_ev(&coal).unwrap() > 4.0);
+        // and a white surface then sits at scene-linear 1.0
+        assert!((exposure_scale(evs[0]) * lit - 1.0).abs() < 1e-3);
+        // sky-only frames fall back to the average
+        let sky = vec![Vec3::splat(3000.0); 100];
+        assert_eq!(auto_ev_incident(&sky, &vec![Vec3::ONE; 100], &vec![0.0; 100]), auto_ev(&sky));
         // a few extreme pixels (the sun) do not move the estimate
         let mut with_sun = frame.clone();
         with_sun[0] = Vec3::splat(1.6e9);

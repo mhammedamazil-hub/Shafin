@@ -38,15 +38,16 @@ const PREPASS_SIDE: u32 = 160;
 /// render and for a later region re-render.
 pub fn measure_exposure(rt: &SceneRt, threads: usize) -> (f32, bool) {
     let post = &rt.scene.post;
+    // exposure compensation as on a camera: +1 is one stop brighter, which is a LOWER EV
     if let Some(ev) = post.exposure_ev {
-        return (ev + post.exposure_bias, false);
+        return (ev - post.exposure_bias, false);
     }
     let f = &rt.scene.film;
     let k = (PREPASS_SIDE as f32 / f.width.max(f.height) as f32).min(1.0);
     let (w, h) = (((f.width as f32 * k).round() as u32).max(1), ((f.height as f32 * k).round() as u32).max(1));
     let pre = integrator::render(rt, &RenderOpts { threads, film: FilmOverride { width: Some(w), height: Some(h), spp: Some(16), max_depth: Some(f.max_depth.min(6)) }, ..RenderOpts::default() });
     // an all-black scene has no meaningful exposure; EV 0 keeps the arithmetic finite
-    (post::auto_ev(&pre.color).unwrap_or(0.0) + post.exposure_bias, true)
+    (post::auto_ev_incident(&pre.color, &pre.albedo, &pre.depth).unwrap_or(0.0) - post.exposure_bias, true)
 }
 
 pub fn render_scene(scene: &Scene, opts: &Options) -> Output {

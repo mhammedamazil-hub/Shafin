@@ -1,0 +1,25 @@
+# Room corner at night with no daylight
+
+# Define the room corner
+plane ground { material: concrete }
+box table { size: [1.4, 0.75, 0.8], material: wood }
+sphere ball { radius: 0.1, on: table, at: [-0.3, 0], color: red, material: plastic }
+cylinder mug { radius: 0.04, height: 0.1, on: table, material: ceramic }
+box book { size: [0.2, 0.03, 0.14], on: table, at: [0.35, 0.1], color: navy }
+
+# Define the sofa
+box sofa { size: [0.8, 0.7, 0.5], material: wood }
+for i in 1..4 {
+    # a stack: each box rests on the one before it (inside a loop a name means the latest one)
+    box sofa { size: [0.8, 0.7, 0.5], on: sofa, rotate: i * 12, color: hsv(i * 80, 0.6, 0.6) }
+}
+
+# Define the side table
+box side_table { size: [0.3, 0.2, 0.1], material: wood }
+sphere glass_sphere { radius: 0.05, on: side_table, at: [0, 0.1], color: white, material: glass }
+
+# Define the lamp
+light lamp { at: [0.5, 1.8, 0.5], power: 1200, temperature: 3000 }
+
+# Camera
+camera { look_at: table, azimuth: 25, elevation: 20 }

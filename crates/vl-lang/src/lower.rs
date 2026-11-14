@@ -103,21 +103,43 @@ pub struct Lowered {
 /// `had_errors`: the program already has syntax errors. Together with evaluation errors this
 /// suppresses the semantic warnings: on a partly evaluated scene (failed properties fall back
 /// to defaults) they would describe consequences of the errors, not the author's scene.
+/// Moonlight relative to sunlight (see `lower`).
+pub const NIGHT_SCALE: f32 = 1.0e-5;
+
 pub fn lower(ev: &mut Ev, had_errors: bool, line_of: &dyn Fn(Span) -> usize) -> Option<Lowered> {
     let mut scene = Scene { materials: Vec::new(), ..Scene::default() };
     let r = &ev.render;
     scene.film = Film { width: r.width, height: r.height, spp: r.samples, min_spp: (r.samples / 4).max(8).min(r.samples), noise_target: r.noise_target, max_depth: r.max_depth, seed: r.seed, reflective_caustics: r.caustics, ..Film::default() };
     scene.post = Post { exposure_ev: r.exposure, exposure_bias: r.exposure_bias, tonemap: r.tonemap, white_balance: r.white_balance, saturation: r.saturation, contrast: r.contrast, ..Post::default() };
-    scene.env = match ev.env.clone() {
+    // A program that sets up lamps and says nothing about the sky is lit by its lamps: a
+    // 1200-lumen bulb next to the sun (100 000 lux) changes nothing, which is never what
+    // the writer of "light lamp { ... }" meant. Such a scene gets the night sky.
+    let has_lamps = ev.nodes.iter().any(|n| n.is_light);
+    let spec = match ev.env.clone() {
+        None if has_lamps => Some(EnvSpec::Sky { elevation: 38.0, azimuth: 135.0, turbidity: 3.0, sun_size: 1.0, sun_strength: 1.0, sky_strength: 1.0, ground: Vec3::splat(0.25), night: true }),
+        other => other,
+    };
+    scene.env = match spec {
         None => Env::Sky(SkyParams { sun_dir: sun_direction(40.0, 135.0), ..SkyParams::default() }),
-        Some(EnvSpec::Sky { elevation, azimuth, turbidity, sun_size, sun_strength, sky_strength, ground }) => Env::Sky(SkyParams {
-            sun_dir: sun_direction(elevation, azimuth),
-            turbidity: turbidity as f32,
-            ground_albedo: ground,
-            sun_size: sun_size as f32,
-            sun_strength: sun_strength as f32,
-            sky_strength: sky_strength as f32,
-        }),
+        Some(EnvSpec::Sky { elevation, azimuth, turbidity, sun_size, sun_strength, sky_strength, ground, night }) => {
+            // Night is the daytime sky model with a full moon in place of the sun. A real full
+            // moon gives about 0.25 lux, 2.5e-6 of sunlight; four times that is used here so
+            // that moonlight still reads next to a lamp.
+            let k = if night { NIGHT_SCALE } else { 1.0 };
+            if night && !has_lamps {
+                // nothing else sets the exposure, and automatic exposure would turn moonlight
+                // into an overcast day; hold it two stops under so that night looks like night
+                scene.post.exposure_bias -= 2.0;
+            }
+            Env::Sky(SkyParams {
+                sun_dir: sun_direction(elevation, azimuth),
+                turbidity: turbidity as f32,
+                ground_albedo: ground,
+                sun_size: sun_size as f32,
+                sun_strength: sun_strength as f32 * k,
+                sky_strength: sky_strength as f32 * k,
+            })
+        }
         Some(EnvSpec::Uniform(c)) => Env::Uniform(c),
         Some(EnvSpec::Gradient { top, horizon, bottom }) => Env::Gradient { zenith: top, horizon, ground: bottom },
     };

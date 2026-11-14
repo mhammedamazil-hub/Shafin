@@ -123,8 +123,38 @@ pub const PRESETS: &[(&str, &str)] = &[
     ("marble", "white marble with grey veins (procedural)"),
     ("concrete", "rough grey concrete with stains and pores (procedural)"),
     ("stone", "rough natural stone (procedural)"),
+    ("snow", "fresh snow: white, soft, faintly uneven (procedural)"),
+    ("ice", "clear bluish ice (refracts)"),
+    ("grass", "lawn seen from standing height: mottled green (procedural, flat)"),
+    ("sand", "dry sand with fine grain (procedural)"),
+    ("soil", "dark earth (procedural)"),
+    ("brick", "red brick wall with mortar lines (procedural)"),
+    ("plaster", "painted wall: off-white, very slightly uneven"),
+    ("asphalt", "dark road surface with grit (procedural)"),
     ("light", "glows; set emission and emission_strength"),
 ];
+
+/// Other words for the presets. A writer who has never seen the list reaches for these.
+pub const ALIASES: &[(&str, &str)] = &[
+    ("aluminum", "aluminium"), ("metal", "steel"), ("metallic", "steel"), ("stainless_steel", "steel"), ("stainless", "steel"),
+    ("cloth", "fabric"), ("textile", "fabric"), ("cotton", "fabric"), ("wool", "fabric"), ("velvet", "fabric"), ("carpet", "fabric"),
+    ("rock", "stone"), ("granite", "stone"), ("porcelain", "ceramic"), ("clay", "ceramic"), ("china", "ceramic"),
+    ("wooden", "wood"), ("oak", "wood"), ("pine", "wood"), ("walnut", "wood"), ("timber", "wood"),
+    ("cement", "concrete"), ("dirt", "soil"), ("earth", "soil"), ("mud", "soil"), ("lawn", "grass"),
+    ("bricks", "brick"), ("wall", "plaster"), ("paint", "matte"), ("painted", "matte"), ("chalk", "matte"), ("diffuse", "matte"),
+    ("cardboard", "paper"), ("shiny", "glossy"), ("lacquer", "glossy"), ("enamel", "glossy"),
+    ("emissive", "light"), ("glow", "light"), ("glowing", "light"), ("crystal", "glass"), ("transparent", "glass"),
+    ("road", "asphalt"), ("tarmac", "asphalt"), ("frosted", "frosted_glass"), ("polished_metal", "chrome"),
+];
+
+/// The preset a word refers to: itself, or the preset it is another word for.
+pub fn canonical(name: &str) -> Option<&'static str> {
+    let n = name.to_ascii_lowercase().replace([' ', '-'], "_");
+    if let Some(p) = PRESETS.iter().find(|p| p.0 == n) {
+        return Some(p.0);
+    }
+    ALIASES.iter().find(|a| a.0 == n).map(|a| a.1)
+}
 
 pub fn preset_names() -> impl Iterator<Item = &'static str> {
     PRESETS.iter().map(|p| p.0)
@@ -132,7 +162,7 @@ pub fn preset_names() -> impl Iterator<Item = &'static str> {
 
 /// Build a preset. `tint` replaces the preset's own colour where that makes sense.
 pub fn preset(name: &str, tint: Option<Vec3>) -> Option<MatSpec> {
-    let name = if name == "aluminum" { "aluminium" } else { name };
+    let name = canonical(name)?;
     let col = |d: Vec3| PV::Const(tint.unwrap_or(d));
     let metal = |f0: Vec3, rough: f32| MatSpec { base: PV::Const(tint.unwrap_or(f0)), metallic: PV::num(1.0), roughness: PV::num(rough), ..MatSpec::default() };
     let base = MatSpec { name: name.to_string(), ..MatSpec::default() };
@@ -217,6 +247,71 @@ pub fn preset(name: &str, tint: Option<Vec3>) -> Option<MatSpec> {
             let height = add(mul(fine, n(0.0006)), add(mul(stains, n(if stone { 0.004 } else { 0.0008 })), mul(pores, n(-0.0005))));
             MatSpec { base: PV::Tex(mul(c(tone), mul(t, n(1.25)))), roughness: PV::num(if stone { 0.85 } else { 0.9 }), specular: 0.4, bump: Some(height), ..base }
         }
+        "snow" => {
+            let tone = tint.unwrap_or(srgb(0.93, 0.95, 0.98));
+            let drift = fbm(mul(p(), n(1.3)), 4.0, 31.0);
+            let fine = fbm(mul(p(), n(38.0)), 3.0, 32.0);
+            let shade = add(n(0.94), mul(add(mul(drift.clone(), n(0.6)), mul(fine.clone(), n(0.4))), n(0.08)));
+            let height = add(mul(drift, n(0.012)), mul(fine, n(0.0012)));
+            MatSpec { base: PV::Tex(mul(c(tone), shade)), roughness: PV::num(0.75), specular: 0.5, sheen: 0.3, bump: Some(height), ..base }
+        }
+        "ice" => MatSpec { base: col(Vec3::ONE), roughness: PV::num(0.06), transmission: PV::num(1.0), ior: 1.31, absorb_color: srgb(0.62, 0.86, 0.95), absorb_dist: 0.35, ..base },
+        "grass" => {
+            let tone = tint.unwrap_or(srgb(0.2, 0.42, 0.11));
+            let patches = fbm(mul(p(), n(0.7)), 4.0, 41.0);
+            let tufts = fbm(mul(p(), n(22.0)), 4.0, 42.0);
+            let blades = op(Op::Noise, vec![mul(p(), n(160.0)), n(43.0)]);
+            let t = op(Op::Saturate, vec![add(add(mul(patches, n(0.45)), mul(tufts.clone(), n(0.4))), mul(blades.clone(), n(0.25)))]);
+            let height = add(mul(tufts, n(0.01)), mul(blades, n(0.003)));
+            MatSpec { base: PV::Tex(mix(c(tone * 0.55), c((tone * vec3(1.45, 1.3, 1.1)).clamp(0.0, 1.0)), t)), roughness: PV::num(0.85), specular: 0.35, sheen: 0.4, bump: Some(height), ..base }
+        }
+        "sand" | "soil" | "asphalt" => {
+            let (default, grain_amp, coarse_amp, rough) = match name {
+                "sand" => (srgb(0.76, 0.66, 0.47), 0.22, 0.012, 0.9),
+                "soil" => (srgb(0.27, 0.19, 0.12), 0.45, 0.02, 0.95),
+                _ => (srgb(0.13, 0.13, 0.14), 0.5, 0.0015, 0.85),
+            };
+            let tone = tint.unwrap_or(default);
+            let coarse = fbm(mul(p(), n(1.1)), 4.0, 51.0);
+            let grit = op(Op::Noise, vec![mul(p(), n(420.0)), n(52.0)]);
+            let mid = fbm(mul(p(), n(30.0)), 3.0, 53.0);
+            let shade = add(n(1.0 - grain_amp * 0.5), mul(add(mul(grit.clone(), n(0.55)), add(mul(mid.clone(), n(0.25)), mul(coarse.clone(), n(0.2)))), n(grain_amp)));
+            let height = add(mul(coarse, n(coarse_amp)), add(mul(mid, n(0.0015)), mul(grit, n(0.0007))));
+            MatSpec { base: PV::Tex(mul(c(tone), shade)), roughness: PV::num(rough), specular: 0.35, bump: Some(height), ..base }
+        }
+        "brick" => {
+            // courses 7.5 cm high, bricks 23 cm long, alternate courses shifted by half a brick;
+            // laid out in the XY plane and in Z so that walls facing either way show bricks
+            let tone = tint.unwrap_or(srgb(0.55, 0.22, 0.15));
+            let mortar = srgb(0.66, 0.63, 0.58);
+            let y = op(Op::GetY, vec![p()]);
+            let along = add(op(Op::GetX, vec![p()]), op(Op::GetZ, vec![p()]));
+            let row = mul(y.clone(), n(1.0 / 0.075));
+            let row_id = op(Op::Floor, vec![row.clone()]);
+            let shift = mul(op(Op::Fract, vec![mul(row_id.clone(), n(0.5))]), n(1.0));
+            let col_u = add(mul(along, n(1.0 / 0.23)), shift);
+            let fu = op(Op::Fract, vec![col_u.clone()]);
+            let fv = op(Op::Fract, vec![row]);
+            // 1 inside a brick, 0 in the mortar joint
+            let in_u = mul(smooth(0.0, 0.045, fu.clone()), op(Op::Sub, vec![n(1.0), smooth(0.955, 1.0, fu)]));
+            let in_v = mul(smooth(0.0, 0.13, fv.clone()), op(Op::Sub, vec![n(1.0), smooth(0.87, 1.0, fv)]));
+            let inside = mul(in_u, in_v);
+            // every brick its own shade
+            let per_brick = op(Op::GetX, vec![op(Op::Cell, vec![op(Op::MakeVec, vec![col_u, row_id, n(0.5)]), n(62.0)])]);
+            let speck = fbm(mul(p(), n(60.0)), 3.0, 61.0);
+            let shade = add(n(0.72), add(mul(per_brick, n(0.38)), mul(speck.clone(), n(0.25))));
+            let brick_col = mul(c(tone), shade);
+            let height = add(mul(inside.clone(), n(0.004)), mul(speck, n(0.0008)));
+            MatSpec { base: PV::Tex(mix(c(mortar), brick_col, inside)), roughness: PV::num(0.9), specular: 0.3, bump: Some(height), ..base }
+        }
+        "plaster" => {
+            let tone = tint.unwrap_or(srgb(0.9, 0.88, 0.84));
+            let wave = fbm(mul(p(), n(3.0)), 4.0, 71.0);
+            let fine = fbm(mul(p(), n(90.0)), 3.0, 72.0);
+            let shade = add(n(0.96), mul(wave.clone(), n(0.06)));
+            let height = add(mul(wave, n(0.0015)), mul(fine, n(0.0003)));
+            MatSpec { base: PV::Tex(mul(c(tone), shade)), roughness: PV::num(0.9), specular: 0.3, bump: Some(height), ..base }
+        }
         "light" => MatSpec { base: PV::Const(Vec3::ZERO), specular: 0.0, emission: PV::Const(tint.unwrap_or(Vec3::ONE)), emission_strength: 1000.0, ..base },
         _ => return None,
     };
@@ -259,6 +354,11 @@ mod tests {
             }
         }
         assert!(preset("aluminum", None).is_some(), "US spelling accepted");
+        for (alias, target) in ALIASES {
+            assert!(PRESETS.iter().any(|p| p.0 == *target), "alias '{alias}' points at '{target}', which is not a preset");
+            assert!(!PRESETS.iter().any(|p| p.0 == *alias), "'{alias}' is both a preset and an alias");
+            assert_eq!(preset(alias, None).unwrap().name, *target);
+        }
         assert!(preset("unobtainium", None).is_none());
         // a tint replaces the colour of plain presets
         let PV::Const(c) = preset("plastic", Some(vec3(0.0, 1.0, 0.0))).unwrap().base else { panic!() };
