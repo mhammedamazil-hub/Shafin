@@ -1,20 +1,10 @@
 {
-  "request_id": 1,
+  "request_id": 2,
   "prompt": "Reply with the single word: ok",
   "pause": 4,
   "test_models": [
-    "openai/gpt-4.1",
     "openai/gpt-4.1-mini",
-    "openai/gpt-4o",
     "openai/gpt-4o-mini",
-    "openai/gpt-5-mini",
-    "meta/llama-3.3-70b-instruct",
-    "meta/meta-llama-3.1-8b-instruct",
-    "mistral-ai/mistral-medium-2505",
-    "mistral-ai/mistral-small-2503",
-    "deepseek/deepseek-v3-0324",
-    "microsoft/phi-4",
-    "xai/grok-3-mini",
-    "cohere/cohere-command-a"
+    "meta/llama-3.3-70b-instruct"
   ]
 }

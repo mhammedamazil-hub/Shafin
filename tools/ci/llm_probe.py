@@ -46,6 +46,9 @@ def main():
 
     cat = call("GET", "/catalog/models")
     result["catalog_status"] = cat["status"]
+    result["catalog_raw_head"] = cat["body"][:600]
+    result["catalog_headers"] = cat["headers"]
+    result["token_len"] = len(TOKEN)
     models = []
     if cat["status"] == 200:
         try:
@@ -77,7 +80,8 @@ def main():
                 text = f"<unparseable: {e}>"
         rl = {k: v for k, v in r["headers"].items() if "ratelimit" in k.lower() or k.lower() == "retry-after"}
         entry = {"model": mid, "status": r["status"], "seconds": r["seconds"], "text": text, "usage": usage,
-                 "ratelimit": rl, "error": None if r["status"] == 200 else r["body"][:400]}
+                 "ratelimit": rl, "error": None if r["status"] == 200 else r["body"][:400],
+                 "raw_head": r["body"][:300], "headers": r["headers"]}
         result["tests"].append(entry)
         print(f"  {mid}: status={r['status']} text={text!r} {rl}", flush=True)
         time.sleep(float(req.get("pause", 4)))
