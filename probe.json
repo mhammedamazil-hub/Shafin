@@ -1,0 +1,65 @@
+{
+ "request": {
+  "request_id": 2,
+  "prompt": "Reply with the single word: ok",
+  "pause": 4,
+  "test_models": [
+   "openai/gpt-4.1-mini",
+   "openai/gpt-4o-mini",
+   "meta/llama-3.3-70b-instruct"
+  ]
+ },
+ "catalog_status": 200,
+ "models": [],
+ "tests": [
+  {
+   "model": "openai/gpt-4.1-mini",
+   "status": 200,
+   "seconds": 0.25,
+   "text": "<unparseable: Expecting value: line 1 column 1 (char 0)>",
+   "usage": null,
+   "ratelimit": {},
+   "error": null,
+   "raw_head": "OK\r\n",
+   "headers": {
+    "Content-Type": "text/plain",
+    "connection": "close"
+   }
+  },
+  {
+   "model": "openai/gpt-4o-mini",
+   "status": 200,
+   "seconds": 0.19,
+   "text": "<unparseable: Expecting value: line 1 column 1 (char 0)>",
+   "usage": null,
+   "ratelimit": {},
+   "error": null,
+   "raw_head": "OK\r\n",
+   "headers": {
+    "Content-Type": "text/plain",
+    "connection": "close"
+   }
+  },
+  {
+   "model": "meta/llama-3.3-70b-instruct",
+   "status": 200,
+   "seconds": 0.21,
+   "text": "<unparseable: Expecting value: line 1 column 1 (char 0)>",
+   "usage": null,
+   "ratelimit": {},
+   "error": null,
+   "raw_head": "OK\r\n",
+   "headers": {
+    "Content-Type": "text/plain",
+    "connection": "close"
+   }
+  }
+ ],
+ "catalog_raw_head": "OK\r\n",
+ "catalog_headers": {
+  "Content-Type": "text/plain",
+  "connection": "close"
+ },
+ "token_len": 377,
+ "catalog_error": "Expecting value: line 1 column 1 (char 0)"
+}

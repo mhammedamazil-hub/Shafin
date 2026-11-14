@@ -1,0 +1,5 @@
+rustc: rustc 1.99.1 (58cf8f9c3 2026-10-13)
+cargo: cargo 1.99.1 (5f94df478 2026-08-27)
+2
+               total        used        free      shared  buff/cache   available
+Mem:            7776         792        6324          44         951        6983

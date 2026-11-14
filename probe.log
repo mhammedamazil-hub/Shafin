@@ -1,0 +1,4 @@
+catalog: status=200 models=0
+  openai/gpt-4.1-mini: status=200 text='<unparseable: Expecting value: line 1 column 1 (char 0)>' {}
+  openai/gpt-4o-mini: status=200 text='<unparseable: Expecting value: line 1 column 1 (char 0)>' {}
+  meta/llama-3.3-70b-instruct: status=200 text='<unparseable: Expecting value: line 1 column 1 (char 0)>' {}

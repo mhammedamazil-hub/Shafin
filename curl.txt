@@ -1,0 +1,23 @@
+== curl catalog ==
+HTTP/2 200 
+content-type: text/plain
+
+body bytes: 4
+OK
+
+== curl chat ==
+HTTP/2 200 
+content-type: text/plain
+
+body bytes: 4
+OK
+
+== curl azure legacy ==
+curl: (6) Could not resolve host: models.inference.ai.azure.com
+/home/runner/work/_temp/7d3ae51d-8ced-462b-ab28-02c0d3a9e5b3.sh: line 13: /home/runner/work/_temp/out/chat2.body: No such file or directory
+body bytes: 
+head: cannot open '/home/runner/work/_temp/out/chat2.body' for reading: No such file or directory
+
+== dns ==
+140.82.114.21   glb-db52c2cf8be544.github.com models.github.ai
+no proxy env
