@@ -1,0 +1,13 @@
+```vl
+plane ground { material: concrete }
+box table { size: [1.4, 0.75, 0.8], material: wood }
+sphere ball { radius: 0.1, on: table, at: [-0.3, 0], color: red, material: plastic }
+cylinder mug { radius: 0.04, height: 0.1, on: table, material: ceramic }
+box book { size: [0.2, 0.03, 0.14], on: table, at: [0.35, 0.1], color: navy }
+for i in 1..4 {
+    # a stack: each book rests on the one before it (inside a loop a name means the latest one)
+    box book { size: [0.2, 0.03, 0.14], on: book, rotate: i * 12, color: hsv(i * 80, 0.6, 0.6) }
+}
+light lamp { at: [0.5, 1.8, 0.5], power: 1200, temperature: 3000 }
+camera { look_at: table, azimuth: 25, elevation: 20 }
+```

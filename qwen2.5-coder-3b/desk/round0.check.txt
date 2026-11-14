@@ -1,0 +1,15 @@
+warning[W310]: light 'sky' has no position; it was placed at [0, 2.5, 0]
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/desk/round0.vl:9:1
+   | light sky { sun_elevation: 40, sun_azimuth: 135 }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: add  at: [x, y, z]
+error[E203]: 'light' has no property 'sun_elevation'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/desk/round0.vl:9:13
+   | light sky { sun_elevation: 40, sun_azimuth: 135 }
+   |             ^^^^^^^^^^^^^
+   = hint: properties of light: shape, radius, size, width, depth, power, brightness, color, temperature, aim, visible, at, on, above, below, left_of, right_of, in_front_of, behind, gap, rotate
+error[E203]: 'light' has no property 'sun_azimuth'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/desk/round0.vl:9:32
+   | light sky { sun_elevation: 40, sun_azimuth: 135 }
+   |                                ^^^^^^^^^^^
+   = hint: properties of light: shape, radius, size, width, depth, power, brightness, color, temperature, aim, visible, at, on, above, below, left_of, right_of, in_front_of, behind, gap, rotate

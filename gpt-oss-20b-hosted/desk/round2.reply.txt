@@ -1,0 +1,19 @@
+```vl
+plane ground { material: concrete }
+
+box table { size: [1.4, 0.75, 0.8], material: wood }
+
+sphere ball { radius: 0.1, on: table, at: [0, 0], color: red, material: plastic }
+
+cylinder mug { radius: 0.04, height: 0.1, on: table, at: [0.3, 0], color: white, material: ceramic }
+
+box book1 { size: [0.2, 0.03, 0.14], on: table, at: [-0.3, 0], color: navy, material: paper }
+
+box book2 { size: [0.2, 0.03, 0.14], on: book1, color: navy, material: paper }
+
+box book3 { size: [0.2, 0.03, 0.14], on: book2, color: navy, material: paper }
+
+camera { look_at: table, azimuth: 30, elevation: 20, fov: 35 }
+
+render { size: [1280, 720], samples: 64 }
+```

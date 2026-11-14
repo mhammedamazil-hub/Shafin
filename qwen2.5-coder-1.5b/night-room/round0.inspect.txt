@@ -1,0 +1,41 @@
+image 1280x720, exposure EV 14.5 (auto), mean brightness 16%, 0% black, 0% white, 0% background
+objects (share of image, how much of itself is visible, position in frame, apparent colour):
+  ground: 71.4% of image, floor, middle-centre, medium muted yellow (olive)
+  table: 19.2% of image, 90% visible, behind sofa_2, middle-centre, dark orange (brown)
+  ball: 0.0% of image, 0% visible, behind sofa_2, -, -
+  mug: 0.0% of image, 0% visible, behind sofa_2, -, -
+  book: 0.1% of image, 26% visible, behind sofa_2, top-centre, very dark purple
+  sofa: 0.0% of image, 0% visible, behind table+sofa_2, -, -
+  sofa_2: 9.3% of image, 93% visible, behind table, top-centre, dark red (brown), cut off by frame
+  sofa_3: 0.0% of image, NOT IN FRAME, -, -
+  sofa_4: 0.0% of image, NOT IN FRAME, -, -
+  side_table: 0.0% of image, 0% visible, behind table, -, -
+  glass_sphere: 0.0% of image, 0% visible, behind table, -, -
+  lamp: 0.0% of image, NOT IN FRAME, -, -
+layout map (top of image first):
+  :::::::::::::::::GGGGGGGGGGGGG::::::::::::::::::
+  :::::::::::::::::GGGGGGGGGGGGG::::::::::::::::::
+  :::::::::::::::::GGGGGGGGGGGGG::::::::::::::::::
+  :::::::::::::::::GGGGGGGGGGGGG::::::::::::::::::
+  :::::::::::::BBBBBGGGGGGGGGGGGBBBBB:::::::::::::
+  :::::::::::::BBBBBBBBBBBBBBBBBBBBBB:::::::::::::
+  :::::::::::::BBBBBBBBBBBBBBBBBBBBBB:::::::::::::
+  :::::::::::::BBBBBBBBBBBBBBBBBBBBBB:::::::::::::
+  :::::::::::::BBBBBBBBBBBBBBBBBBBBB::::::::::::::
+  ::::::::::::::BBBBBBBBBBBBBBBBBBBB::::::::::::::
+  :::::::::::::::::::::BBBBBBBBBBBB:::::::::::::::
+  :::::::::::::::::::::::::::::BBB::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  legend: :=ground B=table G=sofa_2 .=background
+visual findings:
+  V102 'ball' is completely hidden behind 'sofa_2' -> move it, move what hides it, or choose another camera position ('from', or 'azimuth' / 'elevation')
+  V102 'mug' is completely hidden behind 'sofa_2' -> move it, move what hides it, or choose another camera position ('from', or 'azimuth' / 'elevation')
+  V103 'book' is 74% hidden behind 'sofa_2' -> move it, move what hides it, or choose another camera position
+  V102 'sofa' is completely hidden behind 'table', 'sofa_2' -> move it, move what hides it, or choose another camera position ('from', or 'azimuth' / 'elevation')
+  V105 'sofa_2' is cut off by the edge of the picture -> move the camera back ( distance: ... ), widen 'fov', or aim the camera with 'look_at'
+  V101 'sofa_3' is outside the picture: the camera does not see it at all -> point the camera at it ( look_at: sofa_3 ), move it into view, or widen 'fov'
+  V101 'sofa_4' is outside the picture: the camera does not see it at all -> point the camera at it ( look_at: sofa_4 ), move it into view, or widen 'fov'
+  V102 'side_table' is completely hidden behind 'table' -> move it, move what hides it, or choose another camera position ('from', or 'azimuth' / 'elevation')
+  V102 'glass_sphere' is completely hidden behind 'table' -> move it, move what hides it, or choose another camera position ('from', or 'azimuth' / 'elevation')
+  V101 'lamp' is outside the picture: the camera does not see it at all -> point the camera at it ( look_at: lamp ), move it into view, or widen 'fov'

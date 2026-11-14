@@ -1,0 +1,29 @@
+image 1280x720, exposure EV 14.5 (auto), mean brightness 15%, 0% black, 0% white, 0% background
+objects (share of image, how much of itself is visible, position in frame, apparent colour):
+  ground: 78.3% of image, floor, middle-centre, medium muted yellow (olive)
+  table: 20.8% of image, 97% visible, middle-centre, dark orange (brown)
+  ball: 0.4% of image, 100% visible, top-centre, medium vivid red
+  mug: 0.0% of image, 20% visible, behind book3+book2+book1, top-centre, medium gray
+  book1: 0.1% of image, 51% visible, behind book2+book3, top-centre, very dark blue
+  book2: 0.1% of image, 54% visible, behind book3, top-centre, very dark blue
+  book3: 0.2% of image, 87% visible, behind mug, top-centre, very dark blue
+  lamp: 0.0% of image, NOT IN FRAME, -, -
+layout map (top of image first):
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  :::::::::::::::::::CCC::::::::::::::::::::::::::
+  :::::::::::::BBBBBBBBBBBBBBGGBBBBBB:::::::::::::
+  :::::::::::::BBBBBBBBBBBBBBBBBBBBBB:::::::::::::
+  :::::::::::::BBBBBBBBBBBBBBBBBBBBBB:::::::::::::
+  :::::::::::::BBBBBBBBBBBBBBBBBBBBBB:::::::::::::
+  ::::::::::::::BBBBBBBBBBBBBBBBBBBBB:::::::::::::
+  ::::::::::::::BBBBBBBBBBBBBBBBBBBB::::::::::::::
+  :::::::::::::::::::::BBBBBBBBBBBB:::::::::::::::
+  ::::::::::::::::::::::::::::BBB:::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  legend: :=ground B=table C=ball G=book3 .=background
+visual findings:
+  V103 'mug' is 80% hidden behind 'book3', 'book2', 'book1' -> move it, move what hides it, or choose another camera position
+  V101 'lamp' is outside the picture: the camera does not see it at all -> point the camera at it ( look_at: lamp ), move it into view, or widen 'fov'

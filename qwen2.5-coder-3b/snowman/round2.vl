@@ -1,0 +1,11 @@
+kind snow { color: #ffffff, roughness: 0.3 }
+let snow = snow
+plane ground { material: snow }
+sphere ball1 { radius: 0.5, on: ground, at: [0, 0], color: white, material: snow }
+sphere ball2 { radius: 0.3, on: ball1, at: [0, 0], color: white, material: snow }
+sphere ball3 { radius: 0.1, on: ball2, at: [0, 0], color: white, material: snow }
+cylinder hat { radius: 0.1, height: 0.2, on: ball3, at: [0, 0], color: black, material: snow }
+sphere eye1 { radius: 0.05, on: ball3, at: [-0.1, 0.1], color: dark, material: snow }
+sphere eye2 { radius: 0.05, on: ball3, at: [0.1, 0.1], color: dark, material: snow }
+light lamp { at: [0.5, 1.8, 0.5], power: 1200, temperature: 3000 }
+camera { look_at: ball3, azimuth: 25, elevation: 20 }

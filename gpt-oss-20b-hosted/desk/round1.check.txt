@@ -1,0 +1,15 @@
+warning[W322]: 'mug' and 'book1' occupy the same space (their bounding boxes overlap by 0.08 x 0.03 x 0.08 m)
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/desk/round1.vl:9:1
+   | box book1 { size: [0.2, 0.03, 0.14], on: table, at: [0.3, 0], color: navy, material: paper }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: mug  or  on: mug  - ignore this if one is meant to be inside the other
+warning[W322]: 'mug' and 'book2' occupy the same space (their bounding boxes overlap by 0.08 x 0.03 x 0.08 m)
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/desk/round1.vl:11:1
+   | box book2 { size: [0.2, 0.03, 0.14], on: book1, color: navy, material: paper }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: mug  or  on: mug  - ignore this if one is meant to be inside the other
+warning[W322]: 'mug' and 'book3' occupy the same space (their bounding boxes overlap by 0.08 x 0.03 x 0.08 m)
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/desk/round1.vl:13:1
+   | box book3 { size: [0.2, 0.03, 0.14], on: book2, color: navy, material: paper }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: mug  or  on: mug  - ignore this if one is meant to be inside the other

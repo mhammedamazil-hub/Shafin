@@ -1,0 +1,5 @@
+error[E115]: this '{' is never closed
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/desk/round0.vl:10:11
+   | box book2 { size: [0.2, 0.03, 0.14],
+   |           ^
+   = hint: add a matching '}'

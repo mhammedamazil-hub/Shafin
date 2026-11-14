@@ -1,0 +1,8 @@
+   Compiling vl-core v0.1.0 (/home/runner/work/Shafin/Shafin/crates/vl-core)
+   Compiling vl-ir v0.1.0 (/home/runner/work/Shafin/Shafin/crates/vl-ir)
+   Compiling vl-image v0.1.0 (/home/runner/work/Shafin/Shafin/crates/vl-image)
+   Compiling vl-lang v0.1.0 (/home/runner/work/Shafin/Shafin/crates/vl-lang)
+   Compiling vl-render v0.1.0 (/home/runner/work/Shafin/Shafin/crates/vl-render)
+   Compiling vl-cli v0.1.0 (/home/runner/work/Shafin/Shafin/crates/vl-cli)
+    Finished `release` profile [optimized] target(s) in 41.09s
+build exit code: 0

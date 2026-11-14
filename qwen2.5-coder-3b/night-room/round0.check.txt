@@ -1,0 +1,20 @@
+error[E222]: with 'on', 'at' must be a two-number offset [dx, dz] from the centre of the target
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/night-room/round0.vl:2:51
+   | box sofa { size: [1.2, 0.8, 0.6], on: ground, at: [-0.5, 0.4, 0.3], material: wood }
+   |                                                   ^^^^^^^^^^^^^^^^
+   = hint: write for example  on: table, at: [0.2, -0.1]   (the height comes from 'on')
+error[E222]: with 'on', 'at' must be a two-number offset [dx, dz] from the centre of the target
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/night-room/round0.vl:3:52
+   | box table { size: [0.5, 0.2, 0.3], on: ground, at: [0.5, 0.4, 0.3], material: wood }
+   |                                                    ^^^^^^^^^^^^^^^
+   = hint: write for example  on: table, at: [0.2, -0.1]   (the height comes from 'on')
+warning[W310]: light 'environment' has no position; it was placed at [0, 2.5, 0]
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/night-room/round0.vl:5:1
+   | light environment { color: #333333, strength: 500 }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: add  at: [x, y, z]
+error[E203]: 'light' has no property 'strength'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/night-room/round0.vl:5:37
+   | light environment { color: #333333, strength: 500 }
+   |                                     ^^^^^^^^
+   = hint: properties of light: shape, radius, size, width, depth, power, brightness, color, temperature, aim, visible, at, on, above, below, left_of, right_of, in_front_of, behind, gap, rotate

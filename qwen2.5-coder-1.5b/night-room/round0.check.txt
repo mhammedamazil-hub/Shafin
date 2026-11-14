@@ -1,0 +1,45 @@
+warning[W322]: 'table' and 'sofa' occupy the same space (their bounding boxes overlap by 0.80 x 0.70 x 0.50 m)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/night-room/round0.vl:11:1
+   | box sofa { size: [0.8, 0.7, 0.5], material: wood }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: table  or  on: table  - ignore this if one is meant to be inside the other
+warning[W322]: 'ball' and 'sofa_2' occupy the same space (their bounding boxes overlap by 0.20 x 0.20 x 0.20 m)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/night-room/round0.vl:14:5
+   |     box sofa { size: [0.8, 0.7, 0.5], on: sofa, rotate: i * 12, color: hsv(i * 80, 0.6, 0.6) }
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: ball  or  on: ball  - ignore this if one is meant to be inside the other
+warning[W322]: 'mug' and 'sofa_2' occupy the same space (their bounding boxes overlap by 0.08 x 0.10 x 0.08 m)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/night-room/round0.vl:14:5
+   |     box sofa { size: [0.8, 0.7, 0.5], on: sofa, rotate: i * 12, color: hsv(i * 80, 0.6, 0.6) }
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: mug  or  on: mug  - ignore this if one is meant to be inside the other
+warning[W322]: 'book' and 'sofa_2' occupy the same space (their bounding boxes overlap by 0.19 x 0.03 x 0.14 m)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/night-room/round0.vl:14:5
+   |     box sofa { size: [0.8, 0.7, 0.5], on: sofa, rotate: i * 12, color: hsv(i * 80, 0.6, 0.6) }
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: book  or  on: book  - ignore this if one is meant to be inside the other
+warning[W322]: 'table' and 'side_table' occupy the same space (their bounding boxes overlap by 0.30 x 0.20 x 0.10 m)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/night-room/round0.vl:18:1
+   | box side_table { size: [0.3, 0.2, 0.1], material: wood }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: table  or  on: table  - ignore this if one is meant to be inside the other
+warning[W322]: 'sofa' and 'side_table' occupy the same space (their bounding boxes overlap by 0.30 x 0.20 x 0.10 m)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/night-room/round0.vl:18:1
+   | box side_table { size: [0.3, 0.2, 0.1], material: wood }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: sofa  or  on: sofa  - ignore this if one is meant to be inside the other
+warning[W320]: 'glass_sphere' floats 0.20 m above 'ground' (nothing touches its underside)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/night-room/round0.vl:19:1
+   | sphere glass_sphere { radius: 0.05, on: side_table, at: [0, 0.1], color: white, material: glass }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: to rest it there write  on: ground  - ignore this if it is meant to hang in the air
+warning[W322]: 'table' and 'glass_sphere' occupy the same space (their bounding boxes overlap by 0.10 x 0.10 x 0.10 m)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/night-room/round0.vl:19:1
+   | sphere glass_sphere { radius: 0.05, on: side_table, at: [0, 0.1], color: white, material: glass }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: table  or  on: table  - ignore this if one is meant to be inside the other
+warning[W322]: 'sofa' and 'glass_sphere' occupy the same space (their bounding boxes overlap by 0.10 x 0.10 x 0.10 m)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/night-room/round0.vl:19:1
+   | sphere glass_sphere { radius: 0.05, on: side_table, at: [0, 0.1], color: white, material: glass }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: sofa  or  on: sofa  - ignore this if one is meant to be inside the other

@@ -1,0 +1,29 @@
+image 1280x720, exposure EV 14.5 (auto), mean brightness 15%, 0% black, 0% white, 0% background
+objects (share of image, how much of itself is visible, position in frame, apparent colour):
+  ground: 78.3% of image, floor, middle-centre, medium muted yellow (olive)
+  table: 20.5% of image, 96% visible, middle-centre, dark orange (brown)
+  ball: 0.5% of image, 100% visible, top-centre, medium vivid red
+  mug: 0.1% of image, 100% visible, top-centre, light muted yellow
+  book: 0.1% of image, 50% visible, behind book_2+book_3, top-centre, very dark purple
+  book_2: 0.1% of image, 46% visible, behind book_3+book_4, top-centre, dark red (brown)
+  book_3: 0.1% of image, 54% visible, behind book_4, top-centre, dark red (brown)
+  book_4: 0.2% of image, 100% visible, top-centre, dark red (brown)
+  lamp: 0.0% of image, NOT IN FRAME, -, -
+layout map (top of image first):
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  :::::::::::::::::::CCC::::::::::::::::::::::::::
+  :::::::::::::BBBBBBBBBBBBBBHHHBBBBB:::::::::::::
+  :::::::::::::BBBBBBBBBBBBBBBBBBBBBB:::::::::::::
+  :::::::::::::BBBBBBBBBBBBBBBBBBBBBB:::::::::::::
+  :::::::::::::BBBBBBBBBBBBBBBBBBBBBB:::::::::::::
+  :::::::::::::BBBBBBBBBBBBBBBBBBBBB::::::::::::::
+  ::::::::::::::BBBBBBBBBBBBBBBBBBBB::::::::::::::
+  :::::::::::::::::::::BBBBBBBBBBBB:::::::::::::::
+  :::::::::::::::::::::::::::::BBB::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  legend: :=ground B=table C=ball H=book_4 .=background
+visual findings:
+  V101 'lamp' is outside the picture: the camera does not see it at all -> point the camera at it ( look_at: lamp ), move it into view, or widen 'fov'

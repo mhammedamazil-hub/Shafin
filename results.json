@@ -1,0 +1,655 @@
+{
+ "request": {
+  "request_id": 1,
+  "purpose": "First measurement of the central question: can small text-only LLMs write VL from a one-page reference, and does the tool's feedback let them repair their programs?",
+  "time_budget_minutes": 34,
+  "max_rounds": 3,
+  "num_predict": 700,
+  "hosted_pause_seconds": 16,
+  "render": {
+   "width": 480,
+   "samples": 24
+  },
+  "backends": [
+   {
+    "name": "gpt-oss-20b-hosted",
+    "type": "openai",
+    "url": "https://text.pollinations.ai/openai",
+    "model": "openai"
+   },
+   {
+    "name": "qwen2.5-coder-1.5b",
+    "type": "ollama",
+    "model": "qwen2.5-coder:1.5b"
+   },
+   {
+    "name": "qwen2.5-coder-3b",
+    "type": "ollama",
+    "model": "qwen2.5-coder:3b"
+   }
+  ],
+  "prompts": [
+   {
+    "id": "desk",
+    "text": "A wooden table with a red ball, a white ceramic mug and a stack of three books on it, in daylight."
+   },
+   {
+    "id": "snowman",
+    "text": "A snowman on snowy ground: three white balls of decreasing size stacked on top of each other, a black cylinder hat on top, and two small dark spheres for eyes on the front of the head."
+   },
+   {
+    "id": "night-room",
+    "text": "A room corner at night with no daylight: a sofa built from boxes, a small round side table next to it with a glass sphere on it, and one warm lamp that lights the scene."
+   }
+  ]
+ },
+ "reference_words": 831,
+ "runs": [
+  {
+   "backend": "gpt-oss-20b-hosted",
+   "prompt": "desk",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 70.7,
+      "attempts": 1,
+      "served_model": "gpt-oss-20b",
+      "usage": {
+       "prompt_tokens": 1627,
+       "completion_tokens": 1500,
+       "total_tokens": 3127
+      }
+     },
+     "valid": false,
+     "errors": 1,
+     "warnings": 0,
+     "codes": [
+      "E115"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 18.1,
+      "attempts": 1,
+      "served_model": "gpt-oss-20b",
+      "usage": {
+       "prompt_tokens": 1903,
+       "completion_tokens": 609,
+       "total_tokens": 2512
+      }
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 3,
+     "codes": [
+      "W322",
+      "W322",
+      "W322"
+     ],
+     "visual_findings": [
+      "V103",
+      "V101"
+     ],
+     "outcome": "valid"
+    },
+    {
+     "round": 2,
+     "llm": {
+      "status": 200,
+      "seconds": 13.7,
+      "attempts": 2,
+      "served_model": "gpt-oss-20b",
+      "usage": {
+       "prompt_tokens": 3070,
+       "completion_tokens": 560,
+       "total_tokens": 3630
+      }
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 0,
+     "codes": [],
+     "visual_findings": [],
+     "outcome": "valid, nothing reported"
+    }
+   ],
+   "status": "valid program",
+   "first_attempt_valid": false,
+   "rounds_used": 3,
+   "final_program": "gpt-oss-20b-hosted/desk/round2.vl",
+   "render": {
+    "output": "/home/runner/work/_temp/out/gpt-oss-20b-hosted/desk/final.png",
+    "width": 480,
+    "height": 270,
+    "samples": 24,
+    "seconds": 6.69,
+    "million_rays": 10.44,
+    "exposure_ev": 14.51,
+    "png_bytes": 183272,
+    "image_hash": "509c33b771bf6c2b"
+   },
+   "final_findings": [
+    "V104",
+    "V104"
+   ],
+   "final_warnings": []
+  },
+  {
+   "backend": "gpt-oss-20b-hosted",
+   "prompt": "snowman",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 400,
+      "seconds": 0.4,
+      "attempts": 3,
+      "error": "{\"success\":false,\"error\":{\"message\":\"The model exhausted its output token limit before producing an answer. Increase the token limit or reduce reasoning effort.\",\"code\":\"output_token_limit_exceeded\",\"timestamp\":\"2026-11-14T10:59:14.161Z\",\"details\":{\"name\":\"UpstreamError\",\"upstreamHost\":\"portkey.myceli.ai\"}},\"status\":400}"
+     },
+     "outcome": "no reply from the model"
+    }
+   ],
+   "status": "no valid program",
+   "first_attempt_valid": false,
+   "rounds_used": 1
+  },
+  {
+   "backend": "gpt-oss-20b-hosted",
+   "prompt": "night-room",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 400,
+      "seconds": 0.2,
+      "attempts": 3,
+      "error": "{\"success\":false,\"error\":{\"message\":\"The model exhausted its output token limit before producing an answer. Increase the token limit or reduce reasoning effort.\",\"code\":\"output_token_limit_exceeded\",\"timestamp\":\"2026-11-14T11:01:51.515Z\",\"details\":{\"name\":\"UpstreamError\",\"upstreamHost\":\"portkey.myceli.ai\"}},\"status\":400}"
+     },
+     "outcome": "no reply from the model"
+    }
+   ],
+   "status": "no valid program",
+   "first_attempt_valid": false,
+   "rounds_used": 1
+  },
+  {
+   "backend": "qwen2.5-coder-1.5b",
+   "prompt": "desk",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 55.9,
+      "prompt_tokens": 1617,
+      "output_tokens": 282,
+      "prompt_eval_seconds": 19.7,
+      "generation_seconds": 34.6
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 0,
+     "codes": [],
+     "visual_findings": [
+      "V101"
+     ],
+     "outcome": "valid"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 10.2,
+      "prompt_tokens": 2512,
+      "output_tokens": 2,
+      "prompt_eval_seconds": 10.0,
+      "generation_seconds": 0.1
+     },
+     "outcome": "model declared the picture finished"
+    }
+   ],
+   "status": "valid program",
+   "first_attempt_valid": true,
+   "rounds_used": 2,
+   "final_program": "qwen2.5-coder-1.5b/desk/round0.vl",
+   "render": {
+    "output": "/home/runner/work/_temp/out/qwen2.5-coder-1.5b/desk/final.png",
+    "width": 480,
+    "height": 270,
+    "samples": 24,
+    "seconds": 6.77,
+    "million_rays": 10.44,
+    "exposure_ev": 14.5,
+    "png_bytes": 183463,
+    "image_hash": "1dfc5f7f9a56abac"
+   },
+   "final_findings": [
+    "V104",
+    "V101"
+   ],
+   "final_warnings": []
+  },
+  {
+   "backend": "qwen2.5-coder-1.5b",
+   "prompt": "snowman",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 29.1,
+      "prompt_tokens": 1634,
+      "output_tokens": 224,
+      "prompt_eval_seconds": 1.3,
+      "generation_seconds": 27.8
+     },
+     "valid": false,
+     "errors": 6,
+     "warnings": 1,
+     "codes": [
+      "E201",
+      "E205",
+      "E205",
+      "E202",
+      "E202",
+      "W301",
+      "E205"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 50.9,
+      "prompt_tokens": 2662,
+      "output_tokens": 251,
+      "prompt_eval_seconds": 13.3,
+      "generation_seconds": 37.6
+     },
+     "valid": false,
+     "errors": 12,
+     "warnings": 0,
+     "codes": [
+      "E201",
+      "E111",
+      "E201",
+      "E111",
+      "E201",
+      "E111",
+      "E201",
+      "E205",
+      "E205",
+      "E202",
+      "E202",
+      "E205"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 2,
+     "llm": {
+      "status": 200,
+      "seconds": 57.4,
+      "prompt_tokens": 3654,
+      "output_tokens": 251,
+      "prompt_eval_seconds": 14.5,
+      "generation_seconds": 43.0
+     },
+     "valid": false,
+     "errors": 12,
+     "warnings": 0,
+     "codes": [
+      "E201",
+      "E111",
+      "E201",
+      "E111",
+      "E201",
+      "E111",
+      "E201",
+      "E205",
+      "E205",
+      "E202",
+      "E202",
+      "E205"
+     ],
+     "outcome": "errors"
+    }
+   ],
+   "status": "no valid program",
+   "first_attempt_valid": false,
+   "rounds_used": 3
+  },
+  {
+   "backend": "qwen2.5-coder-1.5b",
+   "prompt": "night-room",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 53.0,
+      "prompt_tokens": 1632,
+      "output_tokens": 398,
+      "prompt_eval_seconds": 1.2,
+      "generation_seconds": 51.7
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 9,
+     "codes": [
+      "W322",
+      "W322",
+      "W322",
+      "W322",
+      "W322",
+      "W322",
+      "W320",
+      "W322",
+      "W322"
+     ],
+     "visual_findings": [
+      "V102",
+      "V102",
+      "V103",
+      "V102",
+      "V105",
+      "V101",
+      "V101",
+      "V102",
+      "V102",
+      "V101"
+     ],
+     "outcome": "valid"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 22.6,
+      "prompt_tokens": 3270,
+      "output_tokens": 2,
+      "prompt_eval_seconds": 22.4,
+      "generation_seconds": 0.2
+     },
+     "outcome": "model declared the picture finished"
+    }
+   ],
+   "status": "valid program",
+   "first_attempt_valid": true,
+   "rounds_used": 2,
+   "final_program": "qwen2.5-coder-1.5b/night-room/round0.vl",
+   "render": {
+    "output": "/home/runner/work/_temp/out/qwen2.5-coder-1.5b/night-room/final.png",
+    "width": 480,
+    "height": 270,
+    "samples": 24,
+    "seconds": 6.83,
+    "million_rays": 10.87,
+    "exposure_ev": 14.46,
+    "png_bytes": 183636,
+    "image_hash": "488d65bdd035ec12"
+   },
+   "final_findings": [
+    "V102",
+    "V102",
+    "V103",
+    "V104",
+    "V102",
+    "V105",
+    "V101",
+    "V101",
+    "V102",
+    "V102",
+    "V101"
+   ],
+   "final_warnings": [
+    "W322",
+    "W322",
+    "W322",
+    "W322",
+    "W322",
+    "W322",
+    "W320",
+    "W322",
+    "W322"
+   ]
+  },
+  {
+   "backend": "qwen2.5-coder-3b",
+   "prompt": "desk",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 106.0,
+      "prompt_tokens": 1617,
+      "output_tokens": 263,
+      "prompt_eval_seconds": 41.2,
+      "generation_seconds": 61.5
+     },
+     "valid": false,
+     "errors": 2,
+     "warnings": 1,
+     "codes": [
+      "W310",
+      "E203",
+      "E203"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 85.7,
+      "prompt_tokens": 2289,
+      "output_tokens": 277,
+      "prompt_eval_seconds": 13.0,
+      "generation_seconds": 72.7
+     },
+     "valid": false,
+     "errors": 2,
+     "warnings": 0,
+     "codes": [
+      "E203",
+      "E203"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 2,
+     "llm": {
+      "status": 200,
+      "seconds": 88.0,
+      "prompt_tokens": 2889,
+      "output_tokens": 277,
+      "prompt_eval_seconds": 11.6,
+      "generation_seconds": 76.4
+     },
+     "valid": false,
+     "errors": 2,
+     "warnings": 0,
+     "codes": [
+      "E203",
+      "E203"
+     ],
+     "outcome": "errors"
+    }
+   ],
+   "status": "no valid program",
+   "first_attempt_valid": false,
+   "rounds_used": 3
+  },
+  {
+   "backend": "qwen2.5-coder-3b",
+   "prompt": "snowman",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 66.4,
+      "prompt_tokens": 1634,
+      "output_tokens": 276,
+      "prompt_eval_seconds": 2.2,
+      "generation_seconds": 64.2
+     },
+     "valid": false,
+     "errors": 9,
+     "warnings": 0,
+     "codes": [
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 101.5,
+      "prompt_tokens": 2600,
+      "output_tokens": 294,
+      "prompt_eval_seconds": 21.4,
+      "generation_seconds": 80.1
+     },
+     "valid": false,
+     "errors": 14,
+     "warnings": 0,
+     "codes": [
+      "E201",
+      "E111",
+      "E113",
+      "E113",
+      "E111",
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 2,
+     "llm": {
+      "status": 200,
+      "seconds": 113.1,
+      "prompt_tokens": 3591,
+      "output_tokens": 297,
+      "prompt_eval_seconds": 25.0,
+      "generation_seconds": 88.1
+     },
+     "valid": false,
+     "errors": 11,
+     "warnings": 0,
+     "codes": [
+      "E202",
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201",
+      "E201"
+     ],
+     "outcome": "errors"
+    }
+   ],
+   "status": "no valid program",
+   "first_attempt_valid": false,
+   "rounds_used": 3
+  },
+  {
+   "backend": "qwen2.5-coder-3b",
+   "prompt": "night-room",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 48.4,
+      "prompt_tokens": 1632,
+      "output_tokens": 200,
+      "prompt_eval_seconds": 2.3,
+      "generation_seconds": 46.1
+     },
+     "valid": false,
+     "errors": 3,
+     "warnings": 1,
+     "codes": [
+      "E222",
+      "E222",
+      "W310",
+      "E203"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 72.5,
+      "prompt_tokens": 2417,
+      "output_tokens": 207,
+      "prompt_eval_seconds": 18.6,
+      "generation_seconds": 53.9
+     },
+     "valid": false,
+     "errors": 2,
+     "warnings": 0,
+     "codes": [
+      "E222",
+      "E222"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 2,
+     "llm": {
+      "status": 200,
+      "seconds": 69.0,
+      "prompt_tokens": 2960,
+      "output_tokens": 207,
+      "prompt_eval_seconds": 12.1,
+      "generation_seconds": 56.8
+     },
+     "valid": false,
+     "errors": 2,
+     "warnings": 0,
+     "codes": [
+      "E222",
+      "E222"
+     ],
+     "outcome": "errors"
+    }
+   ],
+   "status": "no valid program",
+   "first_attempt_valid": false,
+   "rounds_used": 3
+  }
+ ],
+ "vl_version": "vl 0.1.0",
+ "elapsed_minutes": 26.6
+}

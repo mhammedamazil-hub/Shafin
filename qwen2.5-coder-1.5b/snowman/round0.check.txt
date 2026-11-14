@@ -1,0 +1,35 @@
+error[E201]: unknown name 'snow'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/snowman/round0.vl:1:26
+   | plane ground { material: snow }
+   |                          ^^^^
+   = hint: define it first with  let name = value  or as an object  kind name { ... }; objects must be defined before they are referred to
+error[E205]: 'white' is not a material
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/snowman/round0.vl:2:48
+   | box snowman { size: [0.8, 0.4, 0.3], material: white }
+   |                                                ^^^^^
+   = hint: 'white' is a colour; write  color: white  (optionally with  material: plastic)
+error[E205]: 'black' is not a material
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/snowman/round0.vl:5:37
+   | sphere hat { radius: 0.1, material: black }
+   |                                     ^^^^^
+   = hint: 'black' is a colour; write  color: black  (optionally with  material: plastic)
+error[E202]: unknown kind of object 'eye1'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/snowman/round0.vl:8:5
+   |     eye1 { at: [0, 0.1, 0.05 + 0.02 * i], color: black, material: plastic }
+   |     ^^^^
+   = hint: build it from simple shapes (sphere, box, cylinder, cone, torus, capsule, plane, disk, rect) inside a  group name { ... }, or declare a reusable kind with  define eye1() { ... }
+error[E202]: unknown kind of object 'eye2'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/snowman/round0.vl:9:5
+   |     eye2 { at: [0, 0.1, -0.05 + 0.02 * i], color: black, material: plastic }
+   |     ^^^^
+   = hint: build it from simple shapes (sphere, box, cylinder, cone, torus, capsule, plane, disk, rect) inside a  group name { ... }, or declare a reusable kind with  define eye2() { ... }
+warning[W301]: the name 'hat' is already used; this object is called 'hat_2'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/snowman/round0.vl:11:5
+   | box hat { size: [0.1, 0.1, 0.1], material: black }
+   |     ^^^
+   = hint: give every object its own name
+error[E205]: 'black' is not a material
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/snowman/round0.vl:11:44
+   | box hat { size: [0.1, 0.1, 0.1], material: black }
+   |                                            ^^^^^
+   = hint: 'black' is a colour; write  color: black  (optionally with  material: plastic)

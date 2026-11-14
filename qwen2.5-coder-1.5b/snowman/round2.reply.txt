@@ -1,0 +1,17 @@
+```vl
+let snow = material: snow
+let white = color: white
+let black = color: black
+
+plane ground { material: snow }
+box snowman { size: [0.8, 0.4, 0.3], material: white }
+sphere eye1 { radius: 0.05, color: black, material: plastic }
+sphere eye2 { radius: 0.05, color: black, material: plastic }
+sphere hat { radius: 0.1, material: black }
+for i in 1..2 {
+    sphere ball { radius: 0.08 - 0.02 * i, color: white, material: plastic }
+    eye1 { at: [0, 0.1, 0.05 + 0.02 * i], color: black, material: plastic }
+    eye2 { at: [0, 0.1, -0.05 + 0.02 * i], color: black, material: plastic }
+}
+group hat_2 { box hat { size: [0.1, 0.1, 0.1], material: black } }
+```

@@ -1,0 +1,70 @@
+error[E201]: unknown name 'material'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/snowman/round1.vl:1:12
+   | let snow = material { color: #ffffff, roughness: 0.3 }
+   |            ^^^^^^^^
+   = hint: define it first with  let name = value  or as an object  kind name { ... }; objects must be defined before they are referred to
+error[E111]: expected a name to start a statement, found '{'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/snowman/round1.vl:1:21
+   | let snow = material { color: #ffffff, roughness: 0.3 }
+   |                     ^
+   = hint: names start with a letter and contain letters, digits or '_'
+error[E113]: expected '{' to start the body of 'color', found ':'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/snowman/round1.vl:1:28
+   | let snow = material { color: #ffffff, roughness: 0.3 }
+   |                            ^
+   = hint: a statement has the form:  kind name { property: value }
+error[E113]: expected '{' to start the body of 'roughness', found ':'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/snowman/round1.vl:1:48
+   | let snow = material { color: #ffffff, roughness: 0.3 }
+   |                                                ^
+   = hint: a statement has the form:  kind name { property: value }
+error[E111]: expected a name to start a statement, found '}'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/snowman/round1.vl:1:54
+   | let snow = material { color: #ffffff, roughness: 0.3 }
+   |                                                      ^
+   = hint: names start with a letter and contain letters, digits or '_'
+error[E201]: unknown name 'snow'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/snowman/round1.vl:2:26
+   | plane ground { material: snow }
+   |                          ^^^^
+   = hint: define it first with  let name = value  or as an object  kind name { ... }; objects must be defined before they are referred to
+error[E201]: unknown name 'snow'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/snowman/round1.vl:3:77
+   | sphere ball1 { radius: 0.5, on: ground, at: [0, 0], color: white, material: snow }
+   |                                                                             ^^^^
+   = hint: define it first with  let name = value  or as an object  kind name { ... }; objects must be defined before they are referred to
+error[E201]: unknown name 'snow'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/snowman/round1.vl:4:76
+   | sphere ball2 { radius: 0.3, on: ball1, at: [0, 0], color: white, material: snow }
+   |                                                                            ^^^^
+   = hint: define it first with  let name = value  or as an object  kind name { ... }; objects must be defined before they are referred to
+error[E201]: unknown name 'snow'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/snowman/round1.vl:5:76
+   | sphere ball3 { radius: 0.1, on: ball2, at: [0, 0], color: white, material: snow }
+   |                                                                            ^^^^
+   = hint: define it first with  let name = value  or as an object  kind name { ... }; objects must be defined before they are referred to
+error[E201]: unknown name 'snow'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/snowman/round1.vl:6:89
+   | cylinder hat { radius: 0.1, height: 0.2, on: ball3, at: [0, 0], color: black, material: snow }
+   |                                                                                         ^^^^
+   = hint: define it first with  let name = value  or as an object  kind name { ... }; objects must be defined before they are referred to
+error[E201]: unknown name 'dark'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/snowman/round1.vl:7:64
+   | sphere eye1 { radius: 0.05, on: ball3, at: [-0.1, 0.1], color: dark, material: snow }
+   |                                                                ^^^^
+   = hint: define it first with  let name = value  or as an object  kind name { ... }; objects must be defined before they are referred to
+error[E201]: unknown name 'snow'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/snowman/round1.vl:7:80
+   | sphere eye1 { radius: 0.05, on: ball3, at: [-0.1, 0.1], color: dark, material: snow }
+   |                                                                                ^^^^
+   = hint: define it first with  let name = value  or as an object  kind name { ... }; objects must be defined before they are referred to
+error[E201]: unknown name 'dark'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/snowman/round1.vl:8:63
+   | sphere eye2 { radius: 0.05, on: ball3, at: [0.1, 0.1], color: dark, material: snow }
+   |                                                               ^^^^
+   = hint: define it first with  let name = value  or as an object  kind name { ... }; objects must be defined before they are referred to
+error[E201]: unknown name 'snow'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/snowman/round1.vl:8:79
+   | sphere eye2 { radius: 0.05, on: ball3, at: [0.1, 0.1], color: dark, material: snow }
+   |                                                                               ^^^^
+   = hint: define it first with  let name = value  or as an object  kind name { ... }; objects must be defined before they are referred to
