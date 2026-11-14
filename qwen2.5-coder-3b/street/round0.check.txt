@@ -1,0 +1,55 @@
+warning[W320]: 'street_lamp' floats 0.40 m above 'ground' (nothing touches its underside)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/street/round0.vl:2:1
+   | box street_lamp { size: [0.5, 0.2, 1.5], material: plastic, at: [0, 0.5, 0], rotate: 90, color: white }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: to rest it there write  on: ground  - ignore this if it is meant to hang in the air
+warning[W320]: 'street_lamp_2' floats 0.15 m above 'car' (nothing touches its underside)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/street/round0.vl:3:1
+   | box street_lamp { size: [0.5, 0.2, 1.5], material: plastic, at: [2, 0.5, 0], rotate: 90, color: white }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: to rest it there write  on: car  - ignore this if it is meant to hang in the air
+warning[W301]: the name 'street_lamp' is already used; this object is called 'street_lamp_2'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/street/round0.vl:3:5
+   | box street_lamp { size: [0.5, 0.2, 1.5], material: plastic, at: [2, 0.5, 0], rotate: 90, color: white }
+   |     ^^^^^^^^^^^
+   = hint: give every object its own name
+warning[W320]: 'street_lamp_3' floats 0.15 m above 'car' (nothing touches its underside)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/street/round0.vl:4:1
+   | box street_lamp { size: [0.5, 0.2, 1.5], material: plastic, at: [4, 0.5, 0], rotate: 90, color: white }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: to rest it there write  on: car  - ignore this if it is meant to hang in the air
+warning[W301]: the name 'street_lamp' is already used; this object is called 'street_lamp_3'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/street/round0.vl:4:5
+   | box street_lamp { size: [0.5, 0.2, 1.5], material: plastic, at: [4, 0.5, 0], rotate: 90, color: white }
+   |     ^^^^^^^^^^^
+   = hint: give every object its own name
+warning[W301]: the name 'street_lamp' is already used; this object is called 'street_lamp_4'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/street/round0.vl:5:5
+   | box street_lamp { size: [0.5, 0.2, 1.5], material: plastic, at: [6, 0.5, 0], rotate: 90, color: white }
+   |     ^^^^^^^^^^^
+   = hint: give every object its own name
+warning[W321]: 'car' extends 0.05 m below the surface of 'ground'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/street/round0.vl:6:1
+   | box car { size: [0.5, 0.3, 0.5], material: dark_red, at: [3, 0.1, 0], rotate: 45 }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: to stand it on the surface write  on: ground
+warning[W342]: 'dark_red' is a colour, not a material; it was used as the colour
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/street/round0.vl:6:44
+   | box car { size: [0.5, 0.3, 0.5], material: dark_red, at: [3, 0.1, 0], rotate: 45 }
+   |                                            ^^^^^^^^
+   = hint: write  color: dark_red
+warning[W341]: there is no material 'dark_black'; a plain surface was used instead (also on lines 8, 9, 10)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/street/round0.vl:7:50
+   | box car_wheel { size: [0.1, 0.1, 0.3], material: dark_black, at: [2.5, 0.1, 0.1], rotate: 90 }
+   |                                                  ^^^^^^^^^^
+   = hint: choose one of: matte, plastic, glossy, rubber, ceramic, paper, fabric, leather, glass, frosted_glass, water, mirror, chrome, gold, silver, copper, brass, steel, iron, aluminium, wood, marble, concrete, stone, snow, ice, grass, sand, soil, brick, plaster, asphalt, light
+warning[W320]: 5 more remarks of this kind, on lines 5, 7, 8, 9, 10
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/street/round0.vl:5:1
+   | box street_lamp { size: [0.5, 0.2, 1.5], material: plastic, at: [6, 0.5, 0], rotate: 90, color: white }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: the advice above applies to each of them
+warning[W301]: 3 more remarks of this kind, on lines 8, 9, 10
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/street/round0.vl:8:5
+   | box car_wheel { size: [0.1, 0.1, 0.3], material: dark_black, at: [2.5, 0.1, -0.1], rotate: 90 }
+   |     ^^^^^^^^^
+   = hint: the advice above applies to each of them

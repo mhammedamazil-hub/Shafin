@@ -1,0 +1,266 @@
+{
+ "request": {
+  "request_id": 2,
+  "purpose": "Second measurement, on prompts no model output has been seen for and with one model family the compiler was never tried on: can small text-only LLMs write VL from the one-page reference, and does the tool's feedback let them repair their programs?",
+  "notes": [
+   "The compiler and the reference were changed after run 1 using run 1's transcripts. Run 1's prompts are therefore not reused here.",
+   "llama3.2:3b is new in this run: no output of that model was seen while the language was being changed.",
+   "The three prompts were fixed before any model saw them. None resembles the worked example in the reference."
+  ],
+  "time_budget_minutes": 34,
+  "max_rounds": 3,
+  "num_predict": 800,
+  "hosted_pause_seconds": 16,
+  "render": {
+   "width": 480,
+   "samples": 24
+  },
+  "backends": [
+   {
+    "name": "qwen2.5-coder-3b",
+    "type": "ollama",
+    "model": "qwen2.5-coder:3b"
+   }
+  ],
+  "prompts": [
+   {
+    "id": "billiards",
+    "text": "Three billiard balls - one red, one yellow, one black - lying next to each other on a table covered with green cloth, lit by a single lamp hanging above the table. The room is dark."
+   },
+   {
+    "id": "fruit-bowl",
+    "text": "A white bowl holding four oranges, standing on a kitchen counter, with a drinking glass beside it, in morning sunlight."
+   },
+   {
+    "id": "street",
+    "text": "A street at dusk: a grey road, a row of four street lamps along one side (each a tall thin pole with a glowing ball on top) and a red car made of two boxes with four dark wheels."
+   }
+  ]
+ },
+ "reference_words": 948,
+ "runs": [
+  {
+   "backend": "qwen2.5-coder-3b",
+   "prompt": "billiards",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 122.2,
+      "prompt_tokens": 1837,
+      "output_tokens": 232,
+      "prompt_eval_seconds": 52.6,
+      "generation_seconds": 61.7
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 2,
+     "codes": [
+      "W322",
+      "W342"
+     ],
+     "visual_findings": [],
+     "outcome": "valid"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 28.4,
+      "prompt_tokens": 2830,
+      "output_tokens": 2,
+      "prompt_eval_seconds": 28.1,
+      "generation_seconds": 0.3
+     },
+     "outcome": "model declared the picture finished"
+    }
+   ],
+   "status": "valid program",
+   "declared_done_with_open_remarks": 2,
+   "final_valid": true,
+   "final_open_remarks": 2,
+   "first_attempt_valid": true,
+   "rounds_used": 2,
+   "final_program": "qwen2.5-coder-3b/billiards/round0.vl",
+   "render": {
+    "output": "/home/runner/work/_temp/out/qwen2.5-coder-3b/billiards/final.png",
+    "width": 480,
+    "height": 270,
+    "samples": 24,
+    "seconds": 11.6,
+    "million_rays": 10.89,
+    "exposure_ev": 1.81,
+    "png_bytes": 211619,
+    "image_hash": "d5beaf72d741ac87"
+   },
+   "final_findings": [],
+   "final_warnings": [
+    "W322",
+    "W342"
+   ]
+  },
+  {
+   "backend": "qwen2.5-coder-3b",
+   "prompt": "fruit-bowl",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 86.1,
+      "prompt_tokens": 1819,
+      "output_tokens": 315,
+      "prompt_eval_seconds": 1.7,
+      "generation_seconds": 84.3
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 5,
+     "codes": [
+      "W301",
+      "W301",
+      "W301",
+      "W320",
+      "W347"
+     ],
+     "visual_findings": [],
+     "outcome": "valid"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 33.7,
+      "prompt_tokens": 3012,
+      "output_tokens": 2,
+      "prompt_eval_seconds": 33.3,
+      "generation_seconds": 0.3
+     },
+     "outcome": "model declared the picture finished"
+    }
+   ],
+   "status": "valid program",
+   "declared_done_with_open_remarks": 5,
+   "final_valid": true,
+   "final_open_remarks": 5,
+   "first_attempt_valid": true,
+   "rounds_used": 2,
+   "final_program": "qwen2.5-coder-3b/fruit-bowl/round0.vl",
+   "render": {
+    "output": "/home/runner/work/_temp/out/qwen2.5-coder-3b/fruit-bowl/final.png",
+    "width": 480,
+    "height": 270,
+    "samples": 24,
+    "seconds": 9.14,
+    "million_rays": 9.94,
+    "exposure_ev": 13.48,
+    "png_bytes": 225695,
+    "image_hash": "8f88357426a46976"
+   },
+   "final_findings": [],
+   "final_warnings": [
+    "W301",
+    "W301",
+    "W301",
+    "W320",
+    "W347"
+   ]
+  },
+  {
+   "backend": "qwen2.5-coder-3b",
+   "prompt": "street",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 137.5,
+      "prompt_tokens": 1839,
+      "output_tokens": 489,
+      "prompt_eval_seconds": 2.9,
+      "generation_seconds": 134.5
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 11,
+     "codes": [
+      "W320",
+      "W320",
+      "W301",
+      "W320",
+      "W301",
+      "W301",
+      "W321",
+      "W342",
+      "W341",
+      "W320",
+      "W301"
+     ],
+     "visual_findings": [
+      "V101",
+      "V105",
+      "V105",
+      "V101",
+      "V105",
+      "V105"
+     ],
+     "outcome": "valid"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 47.7,
+      "prompt_tokens": 3508,
+      "output_tokens": 2,
+      "prompt_eval_seconds": 47.4,
+      "generation_seconds": 0.3
+     },
+     "outcome": "model declared the picture finished"
+    }
+   ],
+   "status": "valid program",
+   "declared_done_with_open_remarks": 17,
+   "final_valid": true,
+   "final_open_remarks": 17,
+   "first_attempt_valid": true,
+   "rounds_used": 2,
+   "final_program": "qwen2.5-coder-3b/street/round0.vl",
+   "render": {
+    "output": "/home/runner/work/_temp/out/qwen2.5-coder-3b/street/final.png",
+    "width": 480,
+    "height": 270,
+    "samples": 24,
+    "seconds": 7.48,
+    "million_rays": 10.18,
+    "exposure_ev": 12.54,
+    "png_bytes": 225039,
+    "image_hash": "e50688a9cde19574"
+   },
+   "final_findings": [
+    "V101",
+    "V105",
+    "V105",
+    "V101",
+    "V105",
+    "V105"
+   ],
+   "final_warnings": [
+    "W320",
+    "W320",
+    "W301",
+    "W320",
+    "W301",
+    "W301",
+    "W321",
+    "W342",
+    "W341",
+    "W320",
+    "W301"
+   ]
+  }
+ ],
+ "vl_version": "vl 0.1.0",
+ "elapsed_minutes": 8.7
+}

@@ -1,0 +1,26 @@
+image 1280x720, exposure EV 1.8 (auto), mean brightness 14%, 28% black, 0% white, 0% background
+objects (share of image, how much of itself is visible, position in frame, apparent colour):
+  ground: 64.1% of image, floor, middle-centre, medium yellow (olive)
+  table: 33.5% of image, 98% visible, middle-centre, dark orange (brown)
+  red: 0.7% of image, 100% visible, top-centre, medium vivid red
+  yellow: 0.8% of image, 100% visible, top-centre, light vivid yellow
+  black: 0.9% of image, 100% visible, top-centre, dark muted orange (brown)
+  cloth: 0.0% of image, 0% visible, behind table, -, -
+  lamp: 0.0% of image, NOT IN FRAME, -, -
+layout map (top of image first):
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::CCC::DDD::EEE:::::::::::::::::
+  ::::::::::::BBBBBBBCBBBDDBBBEEEBBB::::::::::::::
+  :::::::::BBBBBBBBBBBBBBBBBBBBBBBBBBBBB::::::::::
+  ::::::::::BBBBBBBBBBBBBBBBBBBBBBBBBBBB::::::::::
+  ::::::::::BBBBBBBBBBBBBBBBBBBBBBBBBBB:::::::::::
+  ::::::::::BBBBBBBBBBBBBBBBBBBBBBBBBBB:::::::::::
+  ::::::::::BBBBBBBBBBBBBBBBBBBBBBBBBBB:::::::::::
+  :::::::::::BBBBBBBBBBBBBBBBBBBBBBBBBB:::::::::::
+  :::::::::::::BBBBBBBBBBBBBBBBBBBBBBB::::::::::::
+  ::::::::::::::::::::BBBBBBBBBBBBBBB:::::::::::::
+  :::::::::::::::::::::::::::BBBBBBBB:::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  legend: :=ground B=table C=red D=yellow E=black .=background
+visual findings: none

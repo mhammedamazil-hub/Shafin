@@ -1,0 +1,27 @@
+image 1280x720, exposure EV 13.5 (auto), mean brightness 19%, 0% black, 0% white, 0% background
+objects (share of image, how much of itself is visible, position in frame, apparent colour):
+  ground: 72.5% of image, floor, middle-centre, medium gray
+  counter: 26.0% of image, 95% visible, middle-centre, dark orange (brown)
+  mug: 0.4% of image, 85% visible, behind orange_2, middle-right, light gray
+  orange: 0.4% of image, 100% visible, middle-right, light yellow
+  orange_2: 0.4% of image, 100% visible, middle-right, light yellow
+  orange_3: 0.1% of image, 36% visible, behind orange+orange_2, middle-right, light yellow
+  orange_4: 0.1% of image, 38% visible, behind orange_2, middle-right, light yellow
+  glass: 0.7% of image, 93% visible, behind orange_2, middle-right, medium gray
+layout map (top of image first):
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  :::::::::::::::::::B::::::::::::::::::::::::::::
+  :::::::::::::BBBBBBBBBBBBBBBBBBBB:::::::::::::::
+  :::::::BBBBBBBBBBBBBBBBBBBBBBBBBBBBBDDEEEB::::::
+  ::::BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBCCHHH::::::
+  :::::::BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBHHH::::::
+  :::::::::::::BBBBBBBBBBBBBBBBBBBBBBBBBB:::::::::
+  ::::::::::::::::::::BBBBBBBBBBBBBBBBBB::::::::::
+  ::::::::::::::::::::::::::BBBBBBBBBBB:::::::::::
+  :::::::::::::::::::::::::::::::::BBB::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  legend: :=ground B=counter C=mug D=orange E=orange_2 H=glass .=background
+visual findings: none

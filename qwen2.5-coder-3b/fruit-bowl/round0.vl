@@ -1,0 +1,11 @@
+plane ground { material: concrete }
+box counter { size: [1.5, 0.1, 1.2], material: wood }
+cup mug { radius: 0.04, height: 0.1, on: counter, at: [0.7, 0.05], color: white, material: ceramic }
+sphere orange { radius: 0.05, on: mug, at: [-0.05, 0.05], color: orange, material: plastic }
+sphere orange { radius: 0.05, on: mug, at: [0.05, 0.05], color: orange, material: plastic }
+sphere orange { radius: 0.05, on: mug, at: [-0.05, -0.05], color: orange, material: plastic }
+sphere orange { radius: 0.05, on: mug, at: [0.05, -0.05], color: orange, material: plastic }
+box glass { size: [0.1, 0.1, 0.1], on: counter, at: [0.8, 0.05], material: glass }
+light sky { time: morning }
+camera { look_at: counter, azimuth: 30, elevation: 20 }
+render { size: [1280, 720], samples: 64 }

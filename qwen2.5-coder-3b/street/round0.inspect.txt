@@ -1,0 +1,35 @@
+image 1280x720, exposure EV 12.5 (auto), mean brightness 12%, 22% black, 0% white, 0% background
+objects (share of image, how much of itself is visible, position in frame, apparent colour):
+  ground: 76.7% of image, floor, middle-centre, dark gray
+  street_lamp: 0.0% of image, NOT IN FRAME, -, -
+  street_lamp_2: 8.1% of image, 100% visible, top-right, light muted blue, cut off by frame
+  street_lamp_3: 8.1% of image, 100% visible, top-left, light muted blue, cut off by frame
+  street_lamp_4: 0.0% of image, NOT IN FRAME, -, -
+  car: 5.3% of image, 88% visible, behind ground, middle-centre, dark pink-red
+  car_wheel: 0.3% of image, 42% visible, behind car_wheel_2+car, middle-right, light gray
+  car_wheel_2: 0.9% of image, 100% visible, middle-right, medium muted blue
+  car_wheel_3: 0.3% of image, 74% visible, behind car_wheel_4, middle-left, medium gray, cut off by frame
+  car_wheel_4: 0.2% of image, 100% visible, middle-left, dark muted blue, cut off by frame
+layout map (top of image first):
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  DDDDDDDDDDDDDDDDDDDD::::::::CCCCCCCCCCCCCCCCCCCC
+  DDDDDDDDDDDDDDDDDDDD::::::::CCCCCCCCCCCCCCCCCCCC
+  DDDDDDDDDDDDDDDDDDDD::::::::CCCCCCCCCCCCCCCCCCCC
+  :::::::::::::::::::::FFFFFF:::::::::::::::::::::
+  III:::::::::::::::FFFFFFFFFFFFGGGG::::::::::::::
+  J:::::::::::::::::FFFFFFFFFFFFHHHHH:::::::::::::
+  :::::::::::::::::::::FFFFFF:::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  legend: :=ground C=street_lamp_2 D=street_lamp_3 F=car G=car_wheel H=car_wheel_2 I=car_wheel_3 J=car_wheel_4 .=background
+visual findings:
+  V101 'street_lamp' is outside the picture: the camera does not see it at all -> point the camera at it ( look_at: street_lamp ), move it into view, or widen 'fov'
+  V105 'street_lamp_2' is cut off by the edge of the picture -> move the camera back ( distance: ... ), widen 'fov', or aim the camera with 'look_at'
+  V105 'street_lamp_3' is cut off by the edge of the picture -> move the camera back ( distance: ... ), widen 'fov', or aim the camera with 'look_at'
+  V101 'street_lamp_4' is outside the picture: the camera does not see it at all -> point the camera at it ( look_at: street_lamp_4 ), move it into view, or widen 'fov'
+  V105 'car_wheel_3' is cut off by the edge of the picture -> move the camera back ( distance: ... ), widen 'fov', or aim the camera with 'look_at'
+  V105 'car_wheel_4' is cut off by the edge of the picture -> move the camera back ( distance: ... ), widen 'fov', or aim the camera with 'look_at'

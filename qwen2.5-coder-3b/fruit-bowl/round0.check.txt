@@ -1,0 +1,25 @@
+warning[W301]: the name 'orange' is already used; this object is called 'orange_2'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/fruit-bowl/round0.vl:5:8
+   | sphere orange { radius: 0.05, on: mug, at: [0.05, 0.05], color: orange, material: plastic }
+   |        ^^^^^^
+   = hint: give every object its own name
+warning[W301]: the name 'orange' is already used; this object is called 'orange_3'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/fruit-bowl/round0.vl:6:8
+   | sphere orange { radius: 0.05, on: mug, at: [-0.05, -0.05], color: orange, material: plastic }
+   |        ^^^^^^
+   = hint: give every object its own name
+warning[W301]: the name 'orange' is already used; this object is called 'orange_4'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/fruit-bowl/round0.vl:7:8
+   | sphere orange { radius: 0.05, on: mug, at: [0.05, -0.05], color: orange, material: plastic }
+   |        ^^^^^^
+   = hint: give every object its own name
+warning[W320]: 'glass' floats 0.10 m above 'ground' (nothing touches its underside)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/fruit-bowl/round0.vl:8:1
+   | box glass { size: [0.1, 0.1, 0.1], on: counter, at: [0.8, 0.05], material: glass }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: to rest it there write  on: ground  - ignore this if it is meant to hang in the air
+warning[W347]: this block describes the sun, which belongs to the sky, not to a lamp; it was read as  sky { ... }
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/fruit-bowl/round0.vl:9:1
+   | light sky { time: morning }
+   | ^^^^^
+   = hint: write  sky { sun_elevation: 40, sun_azimuth: 135 }  as its own statement

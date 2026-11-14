@@ -1,0 +1,10 @@
+warning[W322]: 'table' and 'cloth' occupy the same space (their bounding boxes overlap by 1.40 x 0.75 x 0.80 m)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/billiards/round0.vl:6:1
+   | box cloth { size: [1.4, 0.75, 0.8], material: green }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: table  or  on: table  - ignore this if one is meant to be inside the other
+warning[W342]: 'green' is a colour, not a material; it was used as the colour
+  --> /home/runner/work/_temp/out/qwen2.5-coder-3b/billiards/round0.vl:6:47
+   | box cloth { size: [1.4, 0.75, 0.8], material: green }
+   |                                               ^^^^^
+   = hint: write  color: green
