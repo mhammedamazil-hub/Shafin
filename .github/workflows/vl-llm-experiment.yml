@@ -1,0 +1,90 @@
+# Research: can text-only LLMs write VL? Builds the `vl` tool on the runner, serves
+# open-weight models locally with Ollama (CPU, no accounts or keys) and runs
+# tools/ci/llm_experiment.py. Runs only when .github/vl-requests/llm-experiment.json changes.
+#
+# Cost note: this repository is private, so every run spends Actions minutes. The
+# experiment step is capped at 40 minutes and the script stops starting new work after
+# its own time budget; partial results are still published.
+#
+# The optional "openai" backend in the request file sends the language reference and the
+# scene descriptions (nothing else) to a third-party endpoint; remove that backend from
+# the request to keep everything on the runner.
+name: vl-llm-experiment
+
+on:
+  push:
+    branches: ["arena/**"]
+    paths: [".github/vl-requests/llm-experiment.json"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vl-llm-experiment
+  cancel-in-progress: true
+
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_KEEP_ALIVE: "20m"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare output directory
+        run: |
+          mkdir -p "$RUNNER_TEMP/out"
+          echo "OUT=$RUNNER_TEMP/out" >> "$GITHUB_ENV"
+      - name: Build vl
+        id: build
+        run: |
+          set -uo pipefail
+          { rustc --version; cargo --version; nproc; } > "$OUT/toolchain.txt" 2>&1
+          cargo build --release --offline -p vl-cli > "$OUT/build.log" 2>&1
+          rc=$?
+          tail -c 20000 "$OUT/build.log" > "$OUT/build.tail" && mv "$OUT/build.tail" "$OUT/build.log"
+          echo "build exit code: $rc" >> "$OUT/build.log"
+          if [ "$rc" = 0 ]; then ./target/release/vl version >> "$OUT/toolchain.txt"; fi
+          exit $rc
+      - name: Install Ollama
+        id: install
+        run: |
+          set -uo pipefail
+          curl -fsSL https://ollama.com/install.sh -o "$RUNNER_TEMP/install.sh"
+          sh "$RUNNER_TEMP/install.sh" > "$OUT/install.log" 2>&1
+          rc=$?
+          echo "install exit code: $rc" >> "$OUT/install.log"
+          exit $rc
+      - name: Start server and run the experiment
+        id: experiment
+        timeout-minutes: 40
+        run: |
+          set -uo pipefail
+          up() { curl -fsS --max-time 3 http://127.0.0.1:11434/api/version > /dev/null 2>&1; }
+          ok=0
+          for i in $(seq 1 5); do if up; then ok=1; break; fi; sleep 1; done
+          if [ "$ok" != 1 ]; then
+            # the installer leaves the service disabled on hosted runners (measured, run 43582226851)
+            nohup ollama serve > "$OUT/serve.log" 2>&1 &
+            for i in $(seq 1 60); do if up; then ok=1; break; fi; sleep 1; done
+          fi
+          echo "ollama server up: $ok" | tee "$OUT/server.txt"
+          # a missing local server is not fatal: hosted backends can still run, local ones are recorded as failed
+          python3 tools/ci/llm_experiment.py .github/vl-requests/llm-experiment.json "$OUT" 2>&1 | tee "$OUT/experiment.log"
+          exit "${PIPESTATUS[0]}"
+      - name: Publish to refs/vl-results/llm-experiment
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/out" && cd "$RUNNER_TEMP/out"
+          printf '{"run_id":"%s","source_sha":"%s","build":"%s","install":"%s","experiment":"%s"}\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "${{ steps.build.outcome }}" "${{ steps.install.outcome }}" "${{ steps.experiment.outcome }}" > status.json
+          for f in install.log serve.log; do [ -f "$f" ] && tail -c 30000 "$f" > "$f.tmp" && mv "$f.tmp" "$f"; done
+          git init -q .
+          git config user.name "vl-bot"
+          git config user.email "vl-bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "llm experiment (run $GITHUB_RUN_ID)"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/vl-results/llm-experiment

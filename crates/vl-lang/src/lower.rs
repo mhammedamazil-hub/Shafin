@@ -100,7 +100,10 @@ pub struct Lowered {
     pub objects: Vec<ObjectInfo>,
 }
 
-pub fn lower(ev: &mut Ev, line_of: &dyn Fn(Span) -> usize) -> Option<Lowered> {
+/// `had_errors`: the program already has syntax errors. Together with evaluation errors this
+/// suppresses the semantic warnings: on a partly evaluated scene (failed properties fall back
+/// to defaults) they would describe consequences of the errors, not the author's scene.
+pub fn lower(ev: &mut Ev, had_errors: bool, line_of: &dyn Fn(Span) -> usize) -> Option<Lowered> {
     let mut scene = Scene { materials: Vec::new(), ..Scene::default() };
     let r = &ev.render;
     scene.film = Film { width: r.width, height: r.height, spp: r.samples, min_spp: (r.samples / 4).max(8).min(r.samples), noise_target: r.noise_target, max_depth: r.max_depth, seed: r.seed, reflective_caustics: r.caustics, ..Film::default() };
@@ -233,7 +236,9 @@ pub fn lower(ev: &mut Ev, line_of: &dyn Fn(Span) -> usize) -> Option<Lowered> {
     let lens_radius = spec.f_stop.map(|n| (0.012 / dmath::tan(half_v)) / (2.0 * n as f32)).unwrap_or(0.0);
     scene.camera = Camera { pos, target, up, vfov, lens_radius, focus, blades: spec.blades };
 
-    semantic_checks(ev, &scene, &infos);
+    if !had_errors && !vl_core::diag::has_errors(&ev.diags) {
+        semantic_checks(ev, &scene, &infos);
+    }
 
     if let Err(errs) = scene.validate() {
         for e in errs {

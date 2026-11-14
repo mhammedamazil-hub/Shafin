@@ -257,6 +257,22 @@ fn diagnostics_for_typical_mistakes_name_the_fix() {
 }
 
 #[test]
+fn errors_do_not_trigger_follow_on_warnings() {
+    // Two typos leave the ball at its default size and position, inside the table. Reporting that
+    // as an overlap would point the author at a consequence instead of the cause.
+    let d = codes("plane ground { }\nbox table { size: [1.4, 0.75, 0.8] }\nsphere ball { raduis: 0.1, on: tabel }");
+    let got: Vec<&str> = d.iter().map(|x| x.0.as_str()).collect();
+    assert_eq!(got, ["E203", "E201"], "{d:?}");
+    // the same scene without the typos is clean, and a genuine overlap is still reported
+    assert!(codes("plane ground { }\nbox table { size: [1.4, 0.75, 0.8] }\nsphere ball { radius: 0.1, on: table }").is_empty());
+    let d = codes("plane ground { }\nbox table { size: [1.4, 0.75, 0.8] }\nsphere ball { radius: 0.5 }");
+    assert!(d.len() == 1 && d[0].0 == "W322", "{d:?}");
+    // a syntax error elsewhere also holds the semantic warnings back
+    let d = codes("plane ground { }\nbox table { size: [1.4, 0.75, 0.8] }\nsphere ball { radius: 0.5 }\nsphere x { radius: }");
+    assert!(d.iter().all(|x| x.0.starts_with('E')), "{d:?}");
+}
+
+#[test]
 fn errors_never_produce_a_scene_and_warnings_do_not_block_one() {
     let c = compile("t", "sphere s { radius: 0.5 }\nbox b { sizee: 1 }");
     assert!(c.scene.is_none() && c.error_count() == 1);

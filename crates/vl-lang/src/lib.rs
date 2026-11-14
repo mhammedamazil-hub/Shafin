@@ -58,7 +58,7 @@ pub fn compile(name: &str, text: &str) -> Compiled {
     let syntax_errors = diag::has_errors(&diags);
     let lowered = {
         let src = &source;
-        lower::lower(&mut ev, &|span| src.line_col(span.start).0)
+        lower::lower(&mut ev, syntax_errors, &|span| src.line_col(span.start).0)
     };
     diags.extend(ev.diags);
     diags.sort_by_key(|d| (d.span.start, d.severity != diag::Severity::Error));
