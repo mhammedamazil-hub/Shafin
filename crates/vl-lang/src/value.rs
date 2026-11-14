@@ -11,7 +11,7 @@ use vl_core::color;
 use vl_core::dmath;
 use vl_core::math::{vec3, Vec3};
 use vl_core::rng;
-use vl_ir::expr::{Instr, Op, Program, ShadeInputs, INPUT_N, INPUT_P, INPUT_RAND, INPUT_UV, INPUT_WP};
+use vl_ir::expr::{Instr, Op, Program, ShadeInputs, INPUT_GRAIN, INPUT_N, INPUT_P, INPUT_RAND, INPUT_UV, INPUT_WP};
 
 #[derive(Debug)]
 pub enum Node {
@@ -73,6 +73,7 @@ pub const INPUT_NAMES: &[(&str, u32, &str)] = &[
     ("UV", INPUT_UV, "surface coordinates (0..1 where the shape has a natural mapping)"),
     ("N", INPUT_N, "surface normal in the world"),
     ("RAND", INPUT_RAND, "three random numbers in 0..1, different for every object"),
+    ("GRAIN", INPUT_GRAIN, "like P, but reordered so GRAIN.x runs along the object's longest side (wood grain, brushed metal)"),
 ];
 
 /// Compiles node trees into a `Program`, sharing common sub-expressions.

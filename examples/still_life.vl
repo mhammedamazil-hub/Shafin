@@ -1,0 +1,32 @@
+# A still life on a wooden table, written the way the language is meant to be used:
+# named objects, relational placement, physical materials and real-world light units.
+
+render { size: [1280, 720], samples: 96 }
+
+sky { sun_elevation: 38, sun_azimuth: 215, turbidity: 3 }
+
+material oak { preset: wood, color: #9a6a3c }
+material teal_glaze { preset: ceramic, color: #2e7d82 }
+material wine { preset: glass, color: #f4e6e2, absorb_color: #7a1028, absorb_distance: 4cm }
+
+plane ground { material: concrete }
+
+# the table: a top on four legs, built once and placed as a unit
+define table(width = 1.4, depth = 0.8, height = 0.74) {
+    box top { size: [width, 4cm, depth], at: [0, height - 2cm, 0], round: 5mm, material: oak }
+    for i in 0..4 {
+        let sx = (i % 2) * 2 - 1
+        let sz = (i - i % 2) - 1
+        box leg { size: [6cm, height - 4cm, 6cm], at: [sx * (width / 2 - 8cm), sz * (depth / 2 - 8cm)], material: oak }
+    }
+}
+table desk { }
+
+sphere orange { radius: 4.5cm, on: desk, at: [-0.28, 0.06], color: #f08a1c, material: plastic }
+sphere glass_ball { radius: 7cm, on: desk, at: [0.02, 0.12], material: glass }
+cylinder mug { radius: 4.2cm, height: 9.5cm, on: desk, at: [0.3, 0.02], material: teal_glaze }
+torus bracelet { radius: 5cm, tube: 7mm, on: desk, at: [-0.05, -0.16], material: gold }
+box book { size: [16cm, 3cm, 23cm], on: desk, at: [-0.48, -0.12], rotate: 18, round: 3mm, color: #7a2233 }
+cone paperweight { radius: 3.5cm, height: 8cm, on: book, material: marble }
+
+camera { look_at: glass_ball, azimuth: 24, elevation: 20, distance: 1.55, fov: 34, f_stop: 4, focus: glass_ball }

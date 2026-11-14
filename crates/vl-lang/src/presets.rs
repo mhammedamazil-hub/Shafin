@@ -5,7 +5,7 @@ use crate::value::{make_op, Node};
 use std::rc::Rc;
 use vl_core::color::srgb_vec_to_linear;
 use vl_core::math::{vec3, Vec3};
-use vl_ir::expr::{Op, INPUT_P};
+use vl_ir::expr::{Op, INPUT_GRAIN, INPUT_P, INPUT_RAND};
 
 /// A material parameter before compilation: constant or texture expression.
 #[derive(Clone, Debug)]
@@ -119,7 +119,7 @@ pub const PRESETS: &[(&str, &str)] = &[
     ("steel", "brushed steel"),
     ("iron", "dark rough iron"),
     ("aluminium", "satin aluminium"),
-    ("wood", "wood with growth rings and grain (procedural); colour sets the species"),
+    ("wood", "timber with grain running along each object's longest side (procedural); colour sets the species"),
     ("marble", "white marble with grey veins (procedural)"),
     ("concrete", "rough grey concrete with stains and pores (procedural)"),
     ("stone", "rough natural stone (procedural)"),
@@ -162,17 +162,32 @@ pub fn preset(name: &str, tint: Option<Vec3>) -> Option<MatSpec> {
         "iron" => metal(vec3(0.42, 0.41, 0.40), 0.55),
         "aluminium" => metal(vec3(0.91, 0.92, 0.92), 0.3),
         "wood" => {
-            // growth rings around the object's Y axis, distorted by low-frequency noise, plus fine streaks along Y
+            // Flat-sawn timber. The grain runs along the longest side of each object (GRAIN.x).
+            // Growth rings are distances from a pith axis that lies well outside the board, so
+            // they show as long, slowly wandering bands rather than concentric circles; their
+            // contrast varies, and fine fibre streaks and pores sit on top. Every object gets a
+            // different piece of wood (offset by RAND).
             let tone = tint.unwrap_or(srgb(0.55, 0.36, 0.2));
-            let (dark, light) = (tone * 0.45, tone * 1.25);
-            let q = mul(p(), c(vec3(1.0, 0.12, 1.0)));
-            let wobble = mul(fbm(mul(q.clone(), n(3.0)), 3.0, 11.0), n(0.06));
-            let radial = op(Op::Length, vec![mul(q, c(vec3(1.0, 0.0, 1.0)))]);
-            let rings = op(Op::Fract, vec![mul(add(radial, wobble), n(38.0))]);
-            let ring = mul(smooth(0.0, 0.75, rings.clone()), op(Op::Sub, vec![n(1.0), smooth(0.85, 1.0, rings)]));
-            let streak = fbm(mul(p(), c(vec3(260.0, 9.0, 260.0))), 3.0, 3.0);
-            let t = op(Op::Saturate, vec![add(mul(ring, n(0.75)), mul(streak.clone(), n(0.35)))]);
-            MatSpec { base: PV::Tex(mix(c(dark), c(light.clamp(0.0, 1.0)), t.clone())), roughness: PV::Tex(mix(n(0.55), n(0.4), t)), bump: Some(mul(streak, n(0.00015))), ..base }
+            let (dark, light) = (tone * 0.62, (tone * 1.12).clamp(0.0, 1.0));
+            let g = add(Rc::new(Node::Input(INPUT_GRAIN)), mul(Rc::new(Node::Input(INPUT_RAND)), n(7.0)));
+            let along = op(Op::GetX, vec![g.clone()]);
+            let u = op(Op::GetY, vec![g.clone()]);
+            let v = op(Op::GetZ, vec![g.clone()]);
+            // slow wander of the rings along the board
+            let slow = mul(g.clone(), c(vec3(0.9, 2.5, 2.5)));
+            let wander = mul(op(Op::Sub, vec![fbm(slow.clone(), 3.0, 11.0), n(0.5)]), n(0.16));
+            let du = add(u.clone(), n(0.23));
+            let dv = add(mul(v.clone(), n(0.55)), n(0.61));
+            let radial = op(Op::Sqrt, vec![add(mul(du.clone(), du), mul(dv.clone(), dv))]);
+            let rings = op(Op::Fract, vec![mul(add(radial, wander), n(46.0))]);
+            // soft rise through the early wood, sharp fall at the late-wood line
+            let band = mul(smooth(0.0, 0.7, rings.clone()), op(Op::Sub, vec![n(1.0), smooth(0.82, 1.0, rings)]));
+            let strength = add(n(0.45), mul(fbm(mul(g.clone(), c(vec3(0.5, 6.0, 6.0))), 2.0, 5.0), n(0.55)));
+            let fibre = fbm(mul(g.clone(), c(vec3(6.0, 420.0, 420.0))), 3.0, 3.0);
+            let blotch = fbm(mul(g.clone(), c(vec3(1.2, 9.0, 9.0))), 3.0, 17.0);
+            let t = op(Op::Saturate, vec![add(add(mul(mul(band, strength), n(0.55)), mul(fibre.clone(), n(0.3))), mul(blotch, n(0.3)))]);
+            let _ = along;
+            MatSpec { base: PV::Tex(mix(c(dark), c(light), t.clone())), roughness: PV::Tex(mix(n(0.5), n(0.36), t)), bump: Some(mul(fibre, n(0.00012))), ..base }
         }
         "marble" => {
             let tone = tint.unwrap_or(srgb(0.93, 0.92, 0.9));

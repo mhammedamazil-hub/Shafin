@@ -10,6 +10,7 @@ path = "src/main.rs"
 
 [dependencies]
 vl-core = { path = "../vl-core" }
-vl-lang = { path = "../vl-lang" }
 vl-image = { path = "../vl-image" }
+vl-ir = { path = "../vl-ir" }
+vl-lang = { path = "../vl-lang" }
 vl-render = { path = "../vl-render" }

@@ -16,7 +16,8 @@ pub enum Op {
     /// `consts[a]`
     Const,
     /// Shading input `a`: 0 = P (object-space position, metres), 1 = world position,
-    /// 2 = UV, 3 = world normal, 4 = per-object random vec3 in [0,1)
+    /// 2 = UV, 3 = world normal, 4 = per-object random vec3 in [0,1),
+    /// 5 = P with its axes reordered so the object's longest side comes first (grain frame)
     Input,
     Neg,
     Abs,
@@ -148,6 +149,7 @@ pub const INPUT_WP: u32 = 1;
 pub const INPUT_UV: u32 = 2;
 pub const INPUT_N: u32 = 3;
 pub const INPUT_RAND: u32 = 4;
+pub const INPUT_GRAIN: u32 = 5;
 
 /// Values available at a shading point.
 #[derive(Clone, Copy, Debug)]
@@ -157,12 +159,21 @@ pub struct ShadeInputs {
     pub uv: Vec3,
     pub n: Vec3,
     pub rand: Vec3,
+    /// `p` with its components reordered: (along the object's longest side, the other two).
+    pub grain: Vec3,
 }
 
 impl ShadeInputs {
     pub fn at(p: Vec3) -> ShadeInputs {
-        ShadeInputs { p, wp: p, uv: Vec3::ZERO, n: Vec3::Y, rand: Vec3::ZERO }
+        ShadeInputs { p, wp: p, uv: Vec3::ZERO, n: Vec3::Y, rand: Vec3::ZERO, grain: p }
     }
+}
+
+/// Axis order that puts the longest side of a box of the given size first (ties keep x, y, z order).
+pub fn grain_axes(size: Vec3) -> [usize; 3] {
+    let mut axes = [0usize, 1, 2];
+    axes.sort_by(|&a, &b| size[b].partial_cmp(&size[a]).unwrap_or(std::cmp::Ordering::Equal));
+    axes
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -218,7 +229,7 @@ impl Program {
                     }
                 }
                 Op::Input => {
-                    if ins.a > INPUT_RAND {
+                    if ins.a > INPUT_GRAIN {
                         return Err(format!("instruction {i}: unknown input {}", ins.a));
                     }
                 }
@@ -249,7 +260,8 @@ impl Program {
                     INPUT_WP => inp.wp,
                     INPUT_UV => inp.uv,
                     INPUT_N => inp.n,
-                    _ => inp.rand,
+                    INPUT_RAND => inp.rand,
+                    _ => inp.grain,
                 },
                 Op::Neg => -a(),
                 Op::Abs => a().abs(),
@@ -358,7 +370,7 @@ impl Program {
                         row.push(Json::Arr(vec![Json::f32(c.x), Json::f32(c.y), Json::f32(c.z)]));
                     }
                 }
-                Op::Input => row.push(["P", "WP", "UV", "N", "RAND"][ins.a.min(4) as usize]),
+                Op::Input => row.push(["P", "WP", "UV", "N", "RAND", "GRAIN"][ins.a.min(5) as usize]),
                 _ => {
                     for r in [ins.a, ins.b, ins.c].iter().take(arity(ins.op)) {
                         row.push(*r as f64);

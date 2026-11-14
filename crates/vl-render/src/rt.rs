@@ -21,6 +21,15 @@ pub struct Inst {
     pub cast_shadow: bool,
     /// Index into `SceneRt::lights`, or -1 when the object is not sampled as a light.
     pub light: i32,
+    /// Object-space axes ordered longest side first (for wood grain and brushed finishes).
+    pub grain: [usize; 3],
+}
+
+impl Inst {
+    #[inline]
+    fn grain_pos(&self, p: Vec3) -> Vec3 {
+        vec3(p[self.grain[0]], p[self.grain[1]], p[self.grain[2]])
+    }
 }
 
 pub struct MatRt {
@@ -252,7 +261,9 @@ impl<'a> SceneRt<'a> {
                     None => unsampled.push(o.name.clone()),
                 }
             }
-            insts.push(Inst { shape: o.shape.clone(), to_world: o.xform, to_obj, material: o.material, rand: o.rand, hidden: o.hidden, cast_shadow: o.cast_shadow, light });
+            let lb = o.shape.local_bounds(&scene.meshes);
+            let grain = vl_ir::expr::grain_axes(if lb.is_empty() { Vec3::ONE } else { lb.size() });
+            insts.push(Inst { shape: o.shape.clone(), to_world: o.xform, to_obj, material: o.material, rand: o.rand, hidden: o.hidden, cast_shadow: o.cast_shadow, light, grain });
         }
 
         let mut bounded = Vec::new();
@@ -437,7 +448,7 @@ impl<'a> SceneRt<'a> {
             let (t1, t2) = onb(ns_o);
             let delta = 5.0e-4f32;
             let height = |q: Vec3, scratch: &mut Scratch| {
-                let inp = ShadeInputs { p: q, wp: inst.to_world.point(q), uv, n: ns_o, rand: inst.rand };
+                let inp = ShadeInputs { p: q, wp: inst.to_world.point(q), uv, n: ns_o, rand: inst.rand, grain: inst.grain_pos(q) };
                 prog.eval(&inp, &mut scratch.bump);
                 scratch.bump[reg as usize].x
             };
@@ -475,7 +486,7 @@ impl<'a> SceneRt<'a> {
             trans = c(&m.transmission).x;
             emission = c(&m.emission);
         } else {
-            let inp = ShadeInputs { p: p_obj, wp: p, uv, n: ns, rand: inst.rand };
+            let inp = ShadeInputs { p: p_obj, wp: p, uv, n: ns, rand: inst.rand, grain: inst.grain_pos(p_obj) };
             self.run_programs(mrt, &inp, scratch);
             let e = |p: &Param| eval_param(p, &scratch.regs, &mrt.programs);
             base = e(&m.base_color);
@@ -515,7 +526,8 @@ impl<'a> SceneRt<'a> {
             Param::Const(c) => c,
             Param::Expr(..) => {
                 let mrt = &self.mats[inst.material as usize];
-                let inp = ShadeInputs { p: inst.to_obj.point(p), wp: p, uv: Vec3::ZERO, n: Vec3::Y, rand: inst.rand };
+                let po = inst.to_obj.point(p);
+                let inp = ShadeInputs { p: po, wp: p, uv: Vec3::ZERO, n: Vec3::Y, rand: inst.rand, grain: inst.grain_pos(po) };
                 self.run_programs(mrt, &inp, scratch);
                 eval_param(&m.emission, &scratch.regs, &mrt.programs).max(Vec3::ZERO)
             }
