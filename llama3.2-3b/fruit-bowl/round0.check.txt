@@ -1,0 +1,10 @@
+warning[W341]: there is no material 'tiles'; a plain surface was used instead
+  --> /home/runner/work/_temp/out/llama3.2-3b/fruit-bowl/round0.vl:2:26
+   | plane ground { material: tiles }
+   |                          ^^^^^
+   = hint: choose one of: matte, plastic, glossy, rubber, ceramic, paper, fabric, leather, glass, frosted_glass, water, mirror, chrome, gold, silver, copper, brass, steel, iron, aluminium, wood, marble, concrete, stone, snow, ice, grass, sand, soil, brick, plaster, asphalt, light
+warning[W343]: 'at' has three numbers but 'on' already decides the height; the middle number was ignored (also on line 14)
+  --> /home/runner/work/_temp/out/llama3.2-3b/fruit-bowl/round0.vl:5:74
+   | cup bowl { radius: 0.04, height: 0.1, material: ceramic, on: ground, at: [0, 0.05, 0.2] }
+   |                                                                          ^^^^^^^^^^^^^^
+   = hint: write  at: [0, 0.2]

@@ -1,0 +1,55 @@
+warning[W342]: 'grey' is a colour, not a material; it was used as the colour
+  --> /home/runner/work/_temp/out/llama3.2-3b/street/round0.vl:2:24
+   | plane road { material: grey }
+   |                        ^^^^
+   = hint: write  color: grey
+warning[W343]: 'at' has three numbers but 'on' already decides the height; the middle number was ignored (also on lines 8, 16, 18)
+  --> /home/runner/work/_temp/out/llama3.2-3b/street/round0.vl:5:90
+   | box lamp { size: [0.2, 0.1, 2], material: metal, color: white, rotate: 90, on: road, at: [0, 0, 1.5] }
+   |                                                                                          ^^^^^^^^^^^
+   = hint: write  at: [0, 1.5]
+warning[W322]: 'lamp_2' and 'lamp_3' occupy the same space (their bounding boxes overlap by 0.20 x 0.10 x 0.20 m)
+  --> /home/runner/work/_temp/out/llama3.2-3b/street/round0.vl:8:5
+   |     box lamp { size: [0.2, 0.1, 2], material: metal, color: white, rotate: i * 90, on: road, at: [0, 0, 1.5 + i * 0.5] }
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: lamp_2  or  on: lamp_2  - ignore this if one is meant to be inside the other
+warning[W322]: 'lamp_3' and 'lamp_4' occupy the same space (their bounding boxes overlap by 0.20 x 0.10 x 0.20 m)
+  --> /home/runner/work/_temp/out/llama3.2-3b/street/round0.vl:8:5
+   |     box lamp { size: [0.2, 0.1, 2], material: metal, color: white, rotate: i * 90, on: road, at: [0, 0, 1.5 + i * 0.5] }
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: lamp_3  or  on: lamp_3  - ignore this if one is meant to be inside the other
+warning[W341]: there is no material 'darkwood'; a plain surface was used instead (also on line 13)
+  --> /home/runner/work/_temp/out/llama3.2-3b/street/round0.vl:12:49
+   | box car_body { size: [0.4, 0.1, 0.8], material: darkwood, color: red }
+   |                                                 ^^^^^^^^
+   = hint: choose one of: matte, plastic, glossy, rubber, ceramic, paper, fabric, leather, glass, frosted_glass, water, mirror, chrome, gold, silver, copper, brass, steel, iron, aluminium, wood, marble, concrete, stone, snow, ice, grass, sand, soil, brick, plaster, asphalt, light
+warning[W322]: 'car_body' and 'car_wheel' occupy the same space (their bounding boxes overlap by 0.05 x 0.05 x 0.05 m)
+  --> /home/runner/work/_temp/out/llama3.2-3b/street/round0.vl:13:1
+   | box car_wheel { size: [0.05, 0.05, 0.05], material: darkwood, color: darkgrey }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: car_body  or  on: car_body  - ignore this if one is meant to be inside the other
+warning[W301]: the name 'car_wheel' is already used; this object is called 'car_wheel_5'
+  --> /home/runner/work/_temp/out/llama3.2-3b/street/round0.vl:18:5
+   | box car_wheel { on: car_body, rotate: 0, at: [0.05, 0.05, 0.4] }
+   |     ^^^^^^^^^
+   = hint: give every object its own name
+warning[W301]: the name 'lamp' is already used; this object is called 'lamp_5'
+  --> /home/runner/work/_temp/out/llama3.2-3b/street/round0.vl:24:7
+   | light lamp { at: [0, 0, 1.5], power: 1200, temperature: 3000 }
+   |       ^^^^
+   = hint: give every object its own name
+warning[W301]: the name 'lamp' is already used; this object is called 'lamp_6'
+  --> /home/runner/work/_temp/out/llama3.2-3b/street/round0.vl:25:7
+   | light lamp { at: [0, 0, 1.5 + 0.5], power: 1200, temperature: 3000 }
+   |       ^^^^
+   = hint: give every object its own name
+warning[W322]: 6 more remarks of this kind, on lines 16, 18
+  --> /home/runner/work/_temp/out/llama3.2-3b/street/round0.vl:16:5
+   |     box car_wheel { on: car_body, rotate: i * 90, at: [0.05 + i * 0.1, 0.05, 0.4] }
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: the advice above applies to each of them
+warning[W301]: 2 more remarks of this kind, on lines 26, 27
+  --> /home/runner/work/_temp/out/llama3.2-3b/street/round0.vl:26:7
+   | light lamp { at: [0, 0, 1.5 + 1], power: 1200, temperature: 3000 }
+   |       ^^^^
+   = hint: the advice above applies to each of them

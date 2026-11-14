@@ -1,0 +1,35 @@
+warning[W322]: 'table' and 'ball' occupy the same space (their bounding boxes overlap by 0.05 x 0.05 x 0.05 m)
+  --> /home/runner/work/_temp/out/llama3.2-3b/billiards/round2.vl:10:1
+   | box ball { size: [0.05, 0.05, 0.05], material: plastic }
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = hint: move one of them, for example  right_of: table  or  on: table  - ignore this if one is meant to be inside the other
+warning[W301]: the name 'ball' is already used; this object is called 'ball_2'
+  --> /home/runner/work/_temp/out/llama3.2-3b/billiards/round2.vl:11:5
+   | cup ball { radius: 0.025, top_radius: 0.001, height: 0.025, on: table, material: black }
+   |     ^^^^
+   = hint: give every object its own name
+warning[W342]: 'black' is a colour, not a material; it was used as the colour
+  --> /home/runner/work/_temp/out/llama3.2-3b/billiards/round2.vl:11:82
+   | cup ball { radius: 0.025, top_radius: 0.001, height: 0.025, on: table, material: black }
+   |                                                                                  ^^^^^
+   = hint: write  color: black
+warning[W301]: the name 'ball' is already used; this object is called 'ball_3'
+  --> /home/runner/work/_temp/out/llama3.2-3b/billiards/round2.vl:12:5
+   | cup ball { radius: 0.025, top_radius: 0.001, height: 0.025, on: table, at: [0.1, 0], material: yellow }
+   |     ^^^^
+   = hint: give every object its own name
+warning[W342]: 'yellow' is a colour, not a material; it was used as the colour
+  --> /home/runner/work/_temp/out/llama3.2-3b/billiards/round2.vl:12:96
+   | cup ball { radius: 0.025, top_radius: 0.001, height: 0.025, on: table, at: [0.1, 0], material: yellow }
+   |                                                                                                ^^^^^^
+   = hint: write  color: yellow
+warning[W301]: the name 'ball' is already used; this object is called 'ball_4'
+  --> /home/runner/work/_temp/out/llama3.2-3b/billiards/round2.vl:13:5
+   | cup ball { radius: 0.025, top_radius: 0.001, height: 0.025, on: table, at: [0.2, 0], material: red }
+   |     ^^^^
+   = hint: give every object its own name
+warning[W342]: 'red' is a colour, not a material; it was used as the colour
+  --> /home/runner/work/_temp/out/llama3.2-3b/billiards/round2.vl:13:96
+   | cup ball { radius: 0.025, top_radius: 0.001, height: 0.025, on: table, at: [0.2, 0], material: red }
+   |                                                                                                ^^^
+   = hint: write  color: red

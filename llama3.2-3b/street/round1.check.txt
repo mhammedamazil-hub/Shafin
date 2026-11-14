@@ -1,0 +1,5 @@
+error[E113]: expected '{' to start the body of 'box', found end of file
+  --> /home/runner/work/_temp/out/llama3.2-3b/street/round1.vl:32:1
+   | 
+   | ^
+   = hint: a statement has the form:  kind name { property: value }

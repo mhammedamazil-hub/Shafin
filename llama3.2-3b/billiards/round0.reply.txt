@@ -1,0 +1,22 @@
+```vl
+# Define the table and cloth
+plane ground { material: green }
+box table { size: [1.4, 0.75, 0.8], material: wood }
+plane cloth { at: [0, 0, 0.05], material: tiles }
+
+# Define the lamp
+light lamp { at: [0, 2.4, 0.5], power: 1200, temperature: 3000 }
+
+# Define the billiard balls
+box ball { size: [0.05, 0.05, 0.05], material: plastic }
+cup ball { radius: 0.025, top_radius: 0, height: 0.025, on: table, material: black }
+cup ball { radius: 0.025, top_radius: 0, height: 0.025, on: table, at: [0.1, 0], material: yellow }
+cup ball { radius: 0.025, top_radius: 0, height: 0.025, on: table, at: [0.2, 0], material: red }
+
+# Define the camera
+camera { look_at: table, azimuth: 25, elevation: 20 }
+
+# Define the environment
+sky { time: night }
+```
+This VL program defines a scene with a table, a green cloth, three billiard balls (one red, one yellow, one black), and a lamp hanging above the table. The camera is positioned to look at the table, and the environment is set to a dark night scene.

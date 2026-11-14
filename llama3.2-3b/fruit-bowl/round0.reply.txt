@@ -1,0 +1,25 @@
+```vl
+# Define the kitchen counter
+plane ground { material: tiles }
+
+# Define the bowl
+cup bowl { radius: 0.04, height: 0.1, material: ceramic, on: ground, at: [0, 0.05, 0.2] }
+
+# Define the oranges
+for i in 1..4 {
+    # a stack: each orange rests on the one before it (inside a loop a name means the latest one)
+    cup orange { radius: 0.01, height: 0.05, material: plastic, on: bowl, rotate: i * 12, color: hsv(i * 80, 0.6, 0.6) }
+}
+
+# Define the drinking glass
+cup glass { radius: 0.04, height: 0.1, material: glass, on: ground, at: [0.3, 0.1, 0.2] }
+
+# Define the morning sunlight
+sky { time: morning }
+
+# Define the camera
+camera { look_at: bowl, azimuth: 25, elevation: 20 }
+
+# Render the scene
+render { size: [1280, 720], samples: 64 }
+```

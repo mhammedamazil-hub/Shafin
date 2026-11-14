@@ -1,0 +1,11 @@
+plane ground { material: concrete }
+
+cup bowl { size: [0.1, 0.05, 0.2], material: ceramic, on: ground, rotate: 90, color: white }
+
+cup orange { size: [0.01, 0.005, 0.05], material: plastic, on: bowl, rotate: i * 12, color: hsv(i * 80, 0.6, 0.6) } for i in 1..4
+
+cup glass { size: [0.04, 0.1, 0.05], material: glass, on: ground, rotate: 90, color: white }
+
+camera { look_at: bowl, azimuth: 25, elevation: 20, fov: 35 }
+
+render { size: [1280, 720], samples: 64 }

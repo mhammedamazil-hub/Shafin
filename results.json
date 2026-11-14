@@ -1,0 +1,333 @@
+{
+ "request": {
+  "request_id": 2,
+  "purpose": "Second measurement, on prompts no model output has been seen for and with one model family the compiler was never tried on: can small text-only LLMs write VL from the one-page reference, and does the tool's feedback let them repair their programs?",
+  "notes": [
+   "The compiler and the reference were changed after run 1 using run 1's transcripts. Run 1's prompts are therefore not reused here.",
+   "llama3.2:3b is new in this run: no output of that model was seen while the language was being changed.",
+   "The three prompts were fixed before any model saw them. None resembles the worked example in the reference."
+  ],
+  "time_budget_minutes": 34,
+  "max_rounds": 3,
+  "num_predict": 800,
+  "hosted_pause_seconds": 16,
+  "render": {
+   "width": 480,
+   "samples": 24
+  },
+  "backends": [
+   {
+    "name": "llama3.2-3b",
+    "type": "ollama",
+    "model": "llama3.2:3b"
+   }
+  ],
+  "prompts": [
+   {
+    "id": "billiards",
+    "text": "Three billiard balls - one red, one yellow, one black - lying next to each other on a table covered with green cloth, lit by a single lamp hanging above the table. The room is dark."
+   },
+   {
+    "id": "fruit-bowl",
+    "text": "A white bowl holding four oranges, standing on a kitchen counter, with a drinking glass beside it, in morning sunlight."
+   },
+   {
+    "id": "street",
+    "text": "A street at dusk: a grey road, a row of four street lamps along one side (each a tall thin pole with a glowing ball on top) and a red car made of two boxes with four dark wheels."
+   }
+  ]
+ },
+ "reference_words": 948,
+ "runs": [
+  {
+   "backend": "llama3.2-3b",
+   "prompt": "billiards",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 79.2,
+      "prompt_tokens": 1794,
+      "output_tokens": 333,
+      "prompt_eval_seconds": 40.2,
+      "generation_seconds": 35.9
+     },
+     "valid": false,
+     "errors": 1,
+     "warnings": 0,
+     "codes": [
+      "E205"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 36.8,
+      "prompt_tokens": 2277,
+      "output_tokens": 281,
+      "prompt_eval_seconds": 4.4,
+      "generation_seconds": 32.4
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 9,
+     "codes": [
+      "W342",
+      "W341",
+      "W322",
+      "W301",
+      "W342",
+      "W301",
+      "W342",
+      "W301",
+      "W342"
+     ],
+     "visual_findings": [],
+     "outcome": "valid"
+    },
+    {
+     "round": 2,
+     "llm": {
+      "status": 200,
+      "seconds": 59.8,
+      "prompt_tokens": 3285,
+      "output_tokens": 281,
+      "prompt_eval_seconds": 21.8,
+      "generation_seconds": 37.9
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 7,
+     "codes": [
+      "W322",
+      "W301",
+      "W342",
+      "W301",
+      "W342",
+      "W301",
+      "W342"
+     ],
+     "visual_findings": [],
+     "outcome": "valid"
+    }
+   ],
+   "status": "valid program",
+   "final_valid": true,
+   "final_open_remarks": 7,
+   "first_attempt_valid": false,
+   "rounds_used": 3,
+   "final_program": "llama3.2-3b/billiards/round2.vl",
+   "render": {
+    "output": "/home/runner/work/_temp/out/llama3.2-3b/billiards/final.png",
+    "width": 480,
+    "height": 270,
+    "samples": 24,
+    "seconds": 3.57,
+    "million_rays": 10.77,
+    "exposure_ev": 0.8,
+    "png_bytes": 194853,
+    "image_hash": "8ee760c92b362657"
+   },
+   "final_findings": [
+    "V104",
+    "V104",
+    "V104"
+   ],
+   "final_warnings": [
+    "W322",
+    "W301",
+    "W342",
+    "W301",
+    "W342",
+    "W301",
+    "W342"
+   ]
+  },
+  {
+   "backend": "llama3.2-3b",
+   "prompt": "fruit-bowl",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 29.5,
+      "prompt_tokens": 1776,
+      "output_tokens": 258,
+      "prompt_eval_seconds": 1.5,
+      "generation_seconds": 27.9
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 2,
+     "codes": [
+      "W341",
+      "W343"
+     ],
+     "visual_findings": [
+      "V101"
+     ],
+     "outcome": "valid"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 43.3,
+      "prompt_tokens": 2740,
+      "output_tokens": 186,
+      "prompt_eval_seconds": 20.1,
+      "generation_seconds": 23.2
+     },
+     "valid": false,
+     "errors": 2,
+     "warnings": 0,
+     "codes": [
+      "E201",
+      "E110"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 2,
+     "llm": {
+      "status": 200,
+      "seconds": 32.8,
+      "prompt_tokens": 3183,
+      "output_tokens": 186,
+      "prompt_eval_seconds": 8.3,
+      "generation_seconds": 24.4
+     },
+     "outcome": "identical resubmission"
+    }
+   ],
+   "status": "valid program",
+   "identical_resubmission": true,
+   "final_valid": false,
+   "final_open_remarks": null,
+   "first_attempt_valid": true,
+   "rounds_used": 3,
+   "final_program": "llama3.2-3b/fruit-bowl/round0.vl",
+   "render": {
+    "output": "/home/runner/work/_temp/out/llama3.2-3b/fruit-bowl/final.png",
+    "width": 480,
+    "height": 270,
+    "samples": 24,
+    "seconds": 1.41,
+    "million_rays": 9.95,
+    "exposure_ev": 13.38,
+    "png_bytes": 203208,
+    "image_hash": "7dbff09470913370"
+   },
+   "final_findings": [
+    "V101"
+   ],
+   "final_warnings": [
+    "W341",
+    "W343"
+   ]
+  },
+  {
+   "backend": "llama3.2-3b",
+   "prompt": "street",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 54.9,
+      "prompt_tokens": 1796,
+      "output_tokens": 480,
+      "prompt_eval_seconds": 2.1,
+      "generation_seconds": 52.7
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 11,
+     "codes": [
+      "W342",
+      "W343",
+      "W322",
+      "W322",
+      "W341",
+      "W322",
+      "W301",
+      "W301",
+      "W301",
+      "W322",
+      "W301"
+     ],
+     "visual_findings": [],
+     "outcome": "valid"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 143.8,
+      "prompt_tokens": 3338,
+      "output_tokens": 800,
+      "prompt_eval_seconds": 32.3,
+      "generation_seconds": 111.5
+     },
+     "valid": false,
+     "errors": 1,
+     "warnings": 0,
+     "codes": [
+      "E113"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 2,
+     "llm": {
+      "status": 200,
+      "seconds": 129.8,
+      "prompt_tokens": 4241,
+      "output_tokens": 800,
+      "prompt_eval_seconds": 4.0,
+      "generation_seconds": 125.8
+     },
+     "outcome": "identical resubmission"
+    }
+   ],
+   "status": "valid program",
+   "identical_resubmission": true,
+   "final_valid": false,
+   "final_open_remarks": null,
+   "first_attempt_valid": true,
+   "rounds_used": 3,
+   "final_program": "llama3.2-3b/street/round0.vl",
+   "render": {
+    "output": "/home/runner/work/_temp/out/llama3.2-3b/street/final.png",
+    "width": 480,
+    "height": 270,
+    "samples": 24,
+    "seconds": 1.37,
+    "million_rays": 9.63,
+    "exposure_ev": 10.07,
+    "png_bytes": 293795,
+    "image_hash": "87b5f64b1674a4ec"
+   },
+   "final_findings": [],
+   "final_warnings": [
+    "W342",
+    "W343",
+    "W322",
+    "W322",
+    "W341",
+    "W322",
+    "W301",
+    "W301",
+    "W301",
+    "W322",
+    "W301"
+   ]
+  }
+ ],
+ "vl_version": "vl 0.1.0",
+ "elapsed_minutes": 10.7
+}

@@ -1,0 +1,26 @@
+image 1280x720, exposure EV 13.4 (auto), mean brightness 43%, 0% black, 0% white, 0% background
+objects (share of image, how much of itself is visible, position in frame, apparent colour):
+  ground: 90.7% of image, floor, middle-centre, light gray
+  bowl: 8.0% of image, 96% visible, middle-centre, very light gray
+  orange: 0.0% of image, 0% visible, behind bowl, -, -
+  orange_2: 0.2% of image, 23% visible, behind bowl+orange_3, top-centre, medium red
+  orange_3: 1.1% of image, 100% visible, top-centre, medium red
+  glass: 0.0% of image, NOT IN FRAME, -, -
+layout map (top of image first):
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  :::::::::::::::::::::::EE:::::::::::::::::::::::
+  :::::::::::::::::::::::EE:::::::::::::::::::::::
+  :::::::::::::::::::::::EE:::::::::::::::::::::::
+  ::::::::::::::::::::BBBDDBBBB:::::::::::::::::::
+  ::::::::::::::::::::BBBBBBBBB:::::::::::::::::::
+  ::::::::::::::::::::BBBBBBBB::::::::::::::::::::
+  ::::::::::::::::::::BBBBBBBB::::::::::::::::::::
+  ::::::::::::::::::::BBBBBBBB::::::::::::::::::::
+  ::::::::::::::::::::BBBBBBBB::::::::::::::::::::
+  ::::::::::::::::::::::BBBB::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  ::::::::::::::::::::::::::::::::::::::::::::::::
+  legend: :=ground B=bowl D=orange_2 E=orange_3 .=background
+visual findings:
+  V101 'glass' is outside the picture: the camera does not see it at all -> point the camera at it ( look_at: glass ), move it into view, or widen 'fov'

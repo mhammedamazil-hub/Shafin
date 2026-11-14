@@ -1,0 +1,5 @@
+error[E205]: 'top_radius' is 0, but it must be between 0.00001 and 100000 (also on lines 12, 13)
+  --> /home/runner/work/_temp/out/llama3.2-3b/billiards/round0.vl:11:39
+   | cup ball { radius: 0.025, top_radius: 0, height: 0.025, on: table, material: black }
+   |                                       ^
+   = hint: use a value between 0.00001 and 100000

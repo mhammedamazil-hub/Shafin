@@ -1,0 +1,10 @@
+error[E201]: unknown name 'i' (also on line 5)
+  --> /home/runner/work/_temp/out/llama3.2-3b/fruit-bowl/round1.vl:5:78
+   | cup orange { size: [0.01, 0.005, 0.05], material: plastic, on: bowl, rotate: i * 12, color: hsv(i * 80, 0.6, 0.6) } for i in 1..4
+   |                                                                              ^
+   = hint: did you mean 'P'?
+error[E110]: expected '{' to open a block, found 'cup'
+  --> /home/runner/work/_temp/out/llama3.2-3b/fruit-bowl/round1.vl:7:1
+   | cup glass { size: [0.04, 0.1, 0.05], material: glass, on: ground, rotate: 90, color: white }
+   | ^^^
+   = hint: insert '{' here

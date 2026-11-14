@@ -1,0 +1,32 @@
+```vl
+plane road { color: grey }
+
+box lamp { size: [0.2, 0.1, 2], material: metal, color: white, rotate: 90, on: road, at: [0, 1.5] }
+box lamp { size: [0.2, 0.1, 2], material: metal, color: white, rotate: 120, on: road, at: [0, 1.8] }
+box lamp { size: [0.2, 0.1, 2], material: metal, color: white, rotate: 180, on: road, at: [0, 2] }
+box lamp { size: [0.2, 0.1, 2], material: metal, color: white, rotate: 240, on: road, at: [0, 2.5] }
+
+box car_body { size: [0.4, 0.1, 0.8], material: darkwood, color: red }
+box car_wheel { size: [0.05, 0.05, 0.05], material: darkwood, color: darkgrey }
+box car_wheel { on: car_body, rotate: 0, at: [0.05, 0.05, 0.4] }
+box car_wheel { on: car_body, rotate: 90, at: [0.05, 0.05, 0.4] }
+box car_wheel { on: car_body, rotate: 180, at: [0.05, 0.05, 0.4] }
+box car_wheel { on: car_body, rotate: 270, at: [0.05, 0.05, 0.4] }
+box car_wheel { on: car_body, rotate: 360, at: [0.05, 0.05, 0.4] }
+
+box car_wheel { on: car_body, rotate: 90, at: [0.05, 0.05, 0.4] }
+box car_wheel { on: car_body, rotate: 180, at: [0.05, 0.05, 0.4] }
+box car_wheel { on: car_body, rotate: 270, at: [0.05, 0.05, 0.4] }
+box car_wheel { on: car_body, rotate: 360, at: [0.05, 0.05, 0.4] }
+
+box car_wheel { on: car_body, rotate: 0, at: [0.05, 0.05, 0.4] }
+box car_wheel { on: car_body, rotate: 90, at: [0.05, 0.05, 0.4] }
+box car_wheel { on: car_body, rotate: 180, at: [0.05, 0.05, 0.4] }
+box car_wheel { on: car_body, rotate: 270, at: [0.05, 0.05, 0.4] }
+
+box car_wheel { on: car_body, rotate: 0, at: [0.05, 0.05, 0.4] }
+box car_wheel { on: car_body, rotate: 90, at: [0.05, 0.05, 0.4] }
+box car_wheel { on: car_body, rotate: 180, at: [0.05, 0.05, 0.4] }
+box car_wheel { on: car_body, rotate: 270, at: [0.05, 0.05, 0.4] }
+
+box car_wheel

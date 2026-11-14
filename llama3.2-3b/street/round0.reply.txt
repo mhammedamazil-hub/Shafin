@@ -1,0 +1,32 @@
+```vl
+# Define the road
+plane road { material: grey }
+
+# Define the street lamps
+box lamp { size: [0.2, 0.1, 2], material: metal, color: white, rotate: 90, on: road, at: [0, 0, 1.5] }
+for i in 1..4 {
+    # a stack: each lamp stands on the one before it
+    box lamp { size: [0.2, 0.1, 2], material: metal, color: white, rotate: i * 90, on: road, at: [0, 0, 1.5 + i * 0.5] }
+}
+
+# Define the car
+box car_body { size: [0.4, 0.1, 0.8], material: darkwood, color: red }
+box car_wheel { size: [0.05, 0.05, 0.05], material: darkwood, color: darkgrey }
+for i in 1..4 {
+    # a stack: each wheel sits on the one before it
+    box car_wheel { on: car_body, rotate: i * 90, at: [0.05 + i * 0.1, 0.05, 0.4] }
+}
+box car_wheel { on: car_body, rotate: 0, at: [0.05, 0.05, 0.4] }
+
+# Define the camera
+camera { look_at: road, azimuth: 25, elevation: 20 }
+
+# Set the lighting
+light lamp { at: [0, 0, 1.5], power: 1200, temperature: 3000 }
+light lamp { at: [0, 0, 1.5 + 0.5], power: 1200, temperature: 3000 }
+light lamp { at: [0, 0, 1.5 + 1], power: 1200, temperature: 3000 }
+light lamp { at: [0, 0, 1.5 + 1.5], power: 1200, temperature: 3000 }
+
+# Set the sky
+sky { time: dusk }
+```
