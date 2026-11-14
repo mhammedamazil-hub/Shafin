@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/vl-core", "crates/vl-image", "crates/vl-lang", "crates/vl-render", "crates/vl-cli"]
+members = ["crates/vl-core", "crates/vl-image", "crates/vl-ir", "crates/vl-lang", "crates/vl-render", "crates/vl-cli"]
 
 [workspace.package]
 version = "0.1.0"

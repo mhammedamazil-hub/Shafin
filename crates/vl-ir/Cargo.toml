@@ -1,0 +1,8 @@
+[package]
+name = "vl-ir"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+vl-core = { path = "../vl-core" }

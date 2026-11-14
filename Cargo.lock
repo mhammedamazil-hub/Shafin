@@ -24,6 +24,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "vl-ir"
+version = "0.1.0"
+dependencies = [
+ "vl-core",
+]
+
+[[package]]
 name = "vl-lang"
 version = "0.1.0"
 dependencies = [
@@ -36,5 +43,5 @@ version = "0.1.0"
 dependencies = [
  "vl-core",
  "vl-image",
- "vl-lang",
+ "vl-ir",
 ]
