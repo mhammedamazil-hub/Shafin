@@ -1,0 +1,43 @@
+```vl
+plane ground { material: concrete }
+
+# A street lamp: a pole with a glowing ball on top
+group lamp {
+    cylinder pole { radius: 0.05, height: 3, material: steel }
+    sphere light { radius: 0.15, color: #ffcc33, material: glass }
+    on: pole
+    on: light, above: pole, gap: 0.05
+}
+
+# Place four lamps along one side of the road
+for i in 0..3 {
+    lamp l{i} { on: ground, at: [i * 1.5 - 2.25, 0] }
+}
+
+# A simple red car made of two boxes and four wheels
+group car {
+    box body1 { size: [1.5, 0.4, 0.3], material: red }
+    box body2 { size: [1.0, 0.4, 0.3], material: red }
+    on: body1, right_of: body1, gap: 0.02
+    cylinder wheel1 { radius: 0.15, height: 0.05, material: darkgrey }
+    cylinder wheel2 { radius: 0.15, height: 0.05, material: darkgrey }
+    cylinder wheel3 { radius: 0.15, height: 0.05, material: darkgrey }
+    cylinder wheel4 { radius: 0.15, height: 0.05, material: darkgrey }
+    on: wheel1, below: body1, gap: 0.02
+    on: wheel2, below: body1, gap: 0.02, right_of: wheel1, gap: 0.5
+    on: wheel3, below: body2, gap: 0.02
+    on: wheel4, below: body2, gap: 0.02, right_of: wheel3, gap: 0.5
+    on: body1, on: body2, above: wheel1, gap: 0.05
+    on: body1, on: body2, at: [0, 0]
+}
+
+car mycar { on: ground, at: [0, 0] }
+
+# Dusk lighting
+sky { sun_elevation: 10, sun_azimuth: 200 }
+environment { color: #ffddaa, strength: 200 }
+
+camera { look_at: mycar, azimuth: 45, elevation: 15, fov: 35 }
+
+render { size: [1920, 1080], samples: 128 }
+```

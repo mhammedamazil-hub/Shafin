@@ -1,0 +1,35 @@
+error[E221]: 'on' and 'above' cannot be combined (also on line 29)
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round1.vl:8:16
+   |     on: light, above: pole, gap: 0.05
+   |                ^^^^^
+   = hint: use one relation, and  at: [dx, dz]  for a sideways offset
+error[E113]: expected '{' to start the body of 'i', found '}'
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round1.vl:13:13
+   |     lamp l{i} { on: ground, at: [i * 1.5 - 2.25, 0] }
+   |             ^
+   = hint: a statement has the form:  kind name { property: value }
+error[E111]: expected a name to start a statement, found '{'
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round1.vl:13:15
+   |     lamp l{i} { on: ground, at: [i * 1.5 - 2.25, 0] }
+   |               ^
+   = hint: names start with a letter and contain letters, digits or '_'
+error[E232]: the property 'on' is not inside an object
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round1.vl:13:17
+   |     lamp l{i} { on: ground, at: [i * 1.5 - 2.25, 0] }
+   |                 ^^
+   = hint: properties belong inside a block:  kind name { property: value }
+error[E232]: the property 'at' is not inside an object
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round1.vl:13:29
+   |     lamp l{i} { on: ground, at: [i * 1.5 - 2.25, 0] }
+   |                             ^^
+   = hint: properties belong inside a block:  kind name { property: value }
+error[E111]: expected a name to start a statement, found '}'
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round1.vl:14:1
+   | }
+   | ^
+   = hint: names start with a letter and contain letters, digits or '_'
+error[E201]: unknown name 'mycar'
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round1.vl:39:19
+   | camera { look_at: mycar, azimuth: 45, elevation: 15, fov: 35 }
+   |                   ^^^^^
+   = hint: nothing called 'mycar' exists above this line. Use the name of an object created earlier, or a number

@@ -1,0 +1,45 @@
+error[E232]: the property 'on' is not inside an object (also on lines 8, 13, 20, 25, 26, 27, 28, 29, ...)
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round0.vl:7:5
+   |     on: pole
+   |     ^^
+   = hint: properties belong inside a block:  kind name { property: value }
+error[E232]: the property 'above' is not inside an object (also on line 30)
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round0.vl:8:16
+   |     on: light, above: pole, gap: 0.05
+   |                ^^^^^
+   = hint: properties belong inside a block:  kind name { property: value }
+error[E232]: the property 'gap' is not inside an object (also on lines 20, 26, 27, 28, 29, 30)
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round0.vl:8:29
+   |     on: light, above: pole, gap: 0.05
+   |                             ^^^
+   = hint: properties belong inside a block:  kind name { property: value }
+error[E113]: expected '{' to start the body of 'i', found '}'
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round0.vl:13:13
+   |     lamp l{i} { on: ground, at: [i * 1.5 - 2.25, 0] }
+   |             ^
+   = hint: a statement has the form:  kind name { property: value }
+error[E111]: expected a name to start a statement, found '{'
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round0.vl:13:15
+   |     lamp l{i} { on: ground, at: [i * 1.5 - 2.25, 0] }
+   |               ^
+   = hint: names start with a letter and contain letters, digits or '_'
+error[E232]: the property 'at' is not inside an object (also on line 31)
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round0.vl:13:29
+   |     lamp l{i} { on: ground, at: [i * 1.5 - 2.25, 0] }
+   |                             ^^
+   = hint: properties belong inside a block:  kind name { property: value }
+error[E111]: expected a name to start a statement, found '}'
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round0.vl:14:1
+   | }
+   | ^
+   = hint: names start with a letter and contain letters, digits or '_'
+error[E232]: the property 'right_of' is not inside an object (also on lines 27, 29)
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round0.vl:20:16
+   |     on: body1, right_of: body1, gap: 0.02
+   |                ^^^^^^^^
+   = hint: properties belong inside a block:  kind name { property: value }
+error[E232]: the property 'below' is not inside an object (also on lines 27, 28, 29)
+  --> /home/runner/work/_temp/out/gpt-oss-20b-hosted/street/round0.vl:26:17
+   |     on: wheel1, below: body1, gap: 0.02
+   |                 ^^^^^
+   = hint: properties belong inside a block:  kind name { property: value }

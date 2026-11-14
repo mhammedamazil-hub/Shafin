@@ -1,0 +1,350 @@
+{
+ "request": {
+  "request_id": 3,
+  "purpose": "Retry of the two prompts of request 2 that the hosted model never answered (HTTP 400, output token limit), with lower reasoning effort. Same prompts, same reference; the compiler differs from request 2 only by the denoiser, which does not affect what is accepted.",
+  "notes": [
+   "Only the hosted backend runs. Its answers to these two prompts have never been seen: both attempts of request 2 failed before any text was returned."
+  ],
+  "time_budget_minutes": 34,
+  "max_rounds": 3,
+  "num_predict": 800,
+  "hosted_pause_seconds": 16,
+  "render": {
+   "width": 480,
+   "samples": 24
+  },
+  "backends": [
+   {
+    "name": "gpt-oss-20b-hosted",
+    "type": "openai",
+    "url": "https://text.pollinations.ai/openai",
+    "model": "openai",
+    "max_tokens": 12000
+   }
+  ],
+  "prompts": [
+   {
+    "id": "fruit-bowl",
+    "text": "A white bowl holding four oranges, standing on a kitchen counter, with a drinking glass beside it, in morning sunlight."
+   },
+   {
+    "id": "street",
+    "text": "A street at dusk: a grey road, a row of four street lamps along one side (each a tall thin pole with a glowing ball on top) and a red car made of two boxes with four dark wheels."
+   }
+  ]
+ },
+ "reference_words": 948,
+ "runs": [
+  {
+   "backend": "gpt-oss-20b-hosted",
+   "prompt": "fruit-bowl",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 12.3,
+      "attempts": 1,
+      "tried": [
+       {
+        "variant": {
+         "max_tokens": 12000,
+         "reasoning_effort": "low"
+        },
+        "status": 200,
+        "seconds": 12.3
+       }
+      ],
+      "served_model": "gpt-oss-20b",
+      "usage": {
+       "prompt_tokens": 1825,
+       "completion_tokens": 384,
+       "total_tokens": 2209
+      },
+      "variant": {
+       "max_tokens": 12000,
+       "reasoning_effort": "low"
+      }
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 0,
+     "codes": [],
+     "visual_findings": [
+      "V105"
+     ],
+     "outcome": "valid"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 9.6,
+      "attempts": 2,
+      "tried": [
+       {
+        "variant": {
+         "max_tokens": 12000,
+         "reasoning_effort": "low"
+        },
+        "status": 402,
+        "seconds": 0.4,
+        "error": "{\"status\":402,\"success\":false,\"error\":{\"code\":\"FREE_LIMIT\",\"message\":\"Free limit reached: 1 reply every 45 seconds per IP. Retry after 14s, or get unlimited rep"
+       },
+       {
+        "variant": {
+         "max_completion_tokens": 12000,
+         "reasoning_effort": "low"
+        },
+        "status": 200,
+        "seconds": 9.6
+       }
+      ],
+      "served_model": "gpt-oss-20b",
+      "usage": {
+       "prompt_tokens": 2737,
+       "completion_tokens": 406,
+       "total_tokens": 3143
+      },
+      "variant": {
+       "max_completion_tokens": 12000,
+       "reasoning_effort": "low"
+      }
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 0,
+     "codes": [],
+     "visual_findings": [
+      "V105"
+     ],
+     "outcome": "valid"
+    },
+    {
+     "round": 2,
+     "llm": {
+      "status": 200,
+      "seconds": 9.3,
+      "attempts": 2,
+      "tried": [
+       {
+        "variant": {
+         "max_tokens": 12000,
+         "reasoning_effort": "low"
+        },
+        "status": 402,
+        "seconds": 0.2,
+        "error": "{\"status\":402,\"success\":false,\"error\":{\"code\":\"FREE_LIMIT\",\"message\":\"Free limit reached: 1 reply every 45 seconds per IP. Retry after 16s, or get unlimited rep"
+       },
+       {
+        "variant": {
+         "max_completion_tokens": 12000,
+         "reasoning_effort": "low"
+        },
+        "status": 200,
+        "seconds": 9.3
+       }
+      ],
+      "served_model": "gpt-oss-20b",
+      "usage": {
+       "prompt_tokens": 3666,
+       "completion_tokens": 369,
+       "total_tokens": 4035
+      },
+      "variant": {
+       "max_completion_tokens": 12000,
+       "reasoning_effort": "low"
+      }
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 0,
+     "codes": [],
+     "visual_findings": [],
+     "outcome": "valid, nothing reported"
+    }
+   ],
+   "status": "valid program",
+   "final_valid": true,
+   "final_open_remarks": 0,
+   "first_attempt_valid": true,
+   "rounds_used": 3,
+   "final_program": "gpt-oss-20b-hosted/fruit-bowl/round2.vl",
+   "render": {
+    "output": "/home/runner/work/_temp/out/gpt-oss-20b-hosted/fruit-bowl/final.png",
+    "width": 480,
+    "height": 270,
+    "samples": 24,
+    "seconds": 11.7,
+    "million_rays": 10.76,
+    "exposure_ev": 13.89,
+    "png_bytes": 145482,
+    "image_hash": "0562f737d133444e"
+   },
+   "final_findings": [],
+   "final_warnings": []
+  },
+  {
+   "backend": "gpt-oss-20b-hosted",
+   "prompt": "street",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 19.0,
+      "attempts": 2,
+      "tried": [
+       {
+        "variant": {
+         "max_tokens": 12000,
+         "reasoning_effort": "low"
+        },
+        "status": 402,
+        "seconds": 0.3,
+        "error": "{\"status\":402,\"success\":false,\"error\":{\"code\":\"FREE_LIMIT\",\"message\":\"Free limit reached: 1 reply every 45 seconds per IP. Retry after 1s, or get unlimited repl"
+       },
+       {
+        "variant": {
+         "max_completion_tokens": 12000,
+         "reasoning_effort": "low"
+        },
+        "status": 200,
+        "seconds": 19.0
+       }
+      ],
+      "served_model": "gpt-oss-20b",
+      "usage": {
+       "prompt_tokens": 1845,
+       "completion_tokens": 698,
+       "total_tokens": 2543
+      },
+      "variant": {
+       "max_completion_tokens": 12000,
+       "reasoning_effort": "low"
+      }
+     },
+     "valid": false,
+     "errors": 9,
+     "warnings": 0,
+     "codes": [
+      "E232",
+      "E232",
+      "E232",
+      "E113",
+      "E111",
+      "E232",
+      "E111",
+      "E232",
+      "E232"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 27.1,
+      "attempts": 2,
+      "tried": [
+       {
+        "variant": {
+         "max_tokens": 12000,
+         "reasoning_effort": "low"
+        },
+        "status": 402,
+        "seconds": 0.4,
+        "error": "{\"status\":402,\"success\":false,\"error\":{\"code\":\"FREE_LIMIT\",\"message\":\"Free limit reached: 1 reply every 45 seconds per IP. Retry after 10s, or get unlimited rep"
+       },
+       {
+        "variant": {
+         "max_completion_tokens": 12000,
+         "reasoning_effort": "low"
+        },
+        "status": 200,
+        "seconds": 27.1
+       }
+      ],
+      "served_model": "gpt-oss-20b",
+      "usage": {
+       "prompt_tokens": 3185,
+       "completion_tokens": 841,
+       "total_tokens": 4026
+      },
+      "variant": {
+       "max_completion_tokens": 12000,
+       "reasoning_effort": "low"
+      }
+     },
+     "valid": false,
+     "errors": 7,
+     "warnings": 0,
+     "codes": [
+      "E221",
+      "E113",
+      "E111",
+      "E232",
+      "E232",
+      "E111",
+      "E201"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 2,
+     "llm": {
+      "status": 200,
+      "seconds": 42.3,
+      "attempts": 2,
+      "tried": [
+       {
+        "variant": {
+         "max_tokens": 12000,
+         "reasoning_effort": "low"
+        },
+        "status": 402,
+        "seconds": 0.3,
+        "error": "{\"status\":402,\"success\":false,\"error\":{\"code\":\"FREE_LIMIT\",\"message\":\"Free limit reached: 1 reply every 45 seconds per IP. Retry after 2s, or get unlimited repl"
+       },
+       {
+        "variant": {
+         "max_completion_tokens": 12000,
+         "reasoning_effort": "low"
+        },
+        "status": 200,
+        "seconds": 42.3
+       }
+      ],
+      "served_model": "gpt-oss-20b",
+      "usage": {
+       "prompt_tokens": 4443,
+       "completion_tokens": 1209,
+       "total_tokens": 5652
+      },
+      "variant": {
+       "max_completion_tokens": 12000,
+       "reasoning_effort": "low"
+      }
+     },
+     "valid": false,
+     "errors": 4,
+     "warnings": 0,
+     "codes": [
+      "E100",
+      "E113",
+      "E112",
+      "E112"
+     ],
+     "outcome": "errors"
+    }
+   ],
+   "status": "no valid program",
+   "final_valid": false,
+   "final_open_remarks": null,
+   "first_attempt_valid": false,
+   "rounds_used": 3
+  }
+ ],
+ "vl_version": "vl 0.1.0",
+ "elapsed_minutes": 5.5
+}

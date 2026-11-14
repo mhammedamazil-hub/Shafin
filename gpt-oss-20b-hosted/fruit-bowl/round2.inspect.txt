@@ -1,0 +1,27 @@
+image 1280x720, exposure EV 13.9 (auto), mean brightness 13%, 0% black, 0% white, 0% background
+objects (share of image, how much of itself is visible, position in frame, apparent colour):
+  ground: 48.2% of image, floor, middle-centre, dark gray
+  counter: 47.2% of image, 96% visible, bottom-centre, dark orange (brown), cut off by frame
+  bowl: 1.6% of image, 74% visible, behind orange1, middle-centre, light gray
+  orange1: 0.6% of image, 81% visible, behind bowl, middle-centre, light yellow
+  orange2: 0.8% of image, 100% visible, top-centre, light yellow
+  orange3: 0.8% of image, 100% visible, top-centre, light yellow
+  orange4: 0.9% of image, 100% visible, top-centre, light yellow
+  glass: 0.4% of image, 100% visible, middle-centre, dark muted red (brown)
+layout map (top of image first):
+  :::::::::::::::::::::::GG:::::::::::::::::::::::
+  ::::::::::::::::::::::GGGG::::::::::::::::::::::
+  :::::::::::::::::::::::FFF::::::::::::::::::::::
+  :::::::::::::::::::::::FFF::::::::::::::::::::::
+  ::::::::::::::::::::::EEE:::::::::::::::::::::::
+  ::::::BBBBBBBBBBBBBBBBEEE:::::::::::::::::::::::
+  BBBBBBBBBBBBBBBBBBBBBCCDDDCCBBBBB:::::::::::::::
+  BBBBBBBBBBBBBBBBBBBBBCCCCCCBBHHBBBBBBBBBB:::::::
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB:::::::
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB:::::::
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB:::::::
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB::::::::
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB::::::::
+  ::BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB::::::::
+  legend: :=ground B=counter C=bowl D=orange1 E=orange2 F=orange3 G=orange4 H=glass .=background
+visual findings: none

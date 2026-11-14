@@ -1,0 +1,28 @@
+image 1280x720, exposure EV 13.8 (auto), mean brightness 13%, 0% black, 0% white, 0% background
+objects (share of image, how much of itself is visible, position in frame, apparent colour):
+  ground: 38.9% of image, floor, middle-centre, dark gray
+  counter: 54.1% of image, 93% visible, bottom-centre, dark orange (brown), cut off by frame
+  bowl: 2.8% of image, 73% visible, behind orange1, middle-centre, light gray
+  orange1: 1.1% of image, 83% visible, behind bowl, middle-centre, light yellow
+  orange2: 1.4% of image, 100% visible, top-centre, light yellow
+  orange3: 1.5% of image, 100% visible, top-centre, light yellow
+  orange4: 0.2% of image, 100% visible, top-centre, medium orange, cut off by frame
+  glass: 0.8% of image, 100% visible, middle-right, dark muted red (brown)
+layout map (top of image first):
+  :::::::::::::::::::::::GFF::::::::::::::::::::::
+  :::::::::::::::::::::::FFFF:::::::::::::::::::::
+  :::::::::::::::::::::::FFFF:::::::::::::::::::::
+  :::::::::::::::::::::EEEE:::::::::::::::::::::::
+  :::::::BBBBBB::::::::EEEE:::::::::::::::::::::::
+  BBBBBBBBBBBBBBBBBBBBBBEDD:::::::::::::::::::::::
+  BBBBBBBBBBBBBBBBBBBCCCDDDDDCCBBBBBBBB:::::::::::
+  BBBBBBBBBBBBBBBBBBBBCCCCCCCCCBBHHHBBBBBBBBBBBBB:
+  BBBBBBBBBBBBBBBBBBBBBBCCCCBBBBBHHBBBBBBBBBBBBBB:
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB::
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB::
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB:::
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB:::
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB:::
+  legend: :=ground B=counter C=bowl D=orange1 E=orange2 F=orange3 G=orange4 H=glass .=background
+visual findings:
+  V105 'orange4' is cut off by the edge of the picture -> move the camera back ( distance: ... ), widen 'fov', or aim the camera with 'look_at'

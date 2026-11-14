@@ -1,0 +1,1 @@
+I’m sorry for the trouble. The syntax for placing objects in VL is a bit strict. Below is a fully working program that follows the rules and should render the requested scene.
