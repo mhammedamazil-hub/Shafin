@@ -1,0 +1,9 @@
+{"tag": "qwen2.5-coder:1.5b", "pull_rc": 0, "pull_seconds": 4.8, "chat_status": 200, "chat_seconds": 121.9, "prompt_tokens": 3401, "prompt_tok_per_s": 28.7, "gen_tokens": 18, "gen_tok_per_s": 9.0, "load_seconds": 1.6, "second_request_seconds": 1.57, "second_prompt_eval_count": 3385, "openai_compat_status": 200}
+{"tag": "qwen2.5-coder:3b", "pull_rc": 0, "pull_seconds": 8.6, "chat_status": 200, "chat_seconds": 248.25, "prompt_tokens": 3401, "prompt_tok_per_s": 14.2, "gen_tokens": 28, "gen_tok_per_s": 4.8, "load_seconds": 2.8, "second_request_seconds": 2.61, "second_prompt_eval_count": 3385, "openai_compat_status": 200}
+{"tag": "llama3.2:3b", "pull_rc": 0, "pull_seconds": 10.8, "chat_status": 200, "chat_seconds": 212.02, "prompt_tokens": 2781, "prompt_tok_per_s": 14.2, "gen_tokens": 52, "gen_tok_per_s": 4.2, "load_seconds": 3.3, "second_request_seconds": 3.3, "second_prompt_eval_count": 2765, "openai_compat_status": 200}
+{"tag": "gemma3:4b", "pull_rc": 0, "pull_seconds": 18.4, "chat_status": 200, "chat_seconds": 309.98, "prompt_tokens": 3564, "prompt_tok_per_s": 13.2, "gen_tokens": 160, "gen_tok_per_s": 4.4, "load_seconds": 4.1, "second_request_seconds": 2.76, "second_prompt_eval_count": 3548, "openai_compat_status": 200}
+{"tag": "qwen2.5-coder:7b", "pull_rc": 0, "pull_seconds": 26.2, "chat_status": 200, "chat_seconds": 607.55, "prompt_tokens": 3401, "prompt_tok_per_s": 6.4, "gen_tokens": 82, "gen_tok_per_s": 2.2, "load_seconds": 41.1, "second_request_seconds": 5.39, "second_prompt_eval_count": 3385, "openai_compat_status": 200}
+keyless https://text.pollinations.ai/openai: 200 '{"id":"pllns_769d554f3ab2da6feff065ce687c05bf","choices":[{"index":0,"message":{"role":"assistant","content":"ok","reaso'
+keyless long https://text.pollinations.ai/openai: 200 in 22.93s
+model list https://text.pollinations.ai/models: 200 (286 bytes)
+OK: 5 of 5 local models answered

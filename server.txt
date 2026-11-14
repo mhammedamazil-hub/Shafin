@@ -1,0 +1,1 @@
+server up: 1 (started by: explicit 'ollama serve')

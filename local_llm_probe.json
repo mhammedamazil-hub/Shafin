@@ -1,0 +1,153 @@
+{
+ "request": {
+  "request_id": 2,
+  "note": "request 1 (run 43581446661) measured nothing: the Ollama server was not running and the job still reported success. Shortened to five small models to limit Actions minutes.",
+  "ollama_models": [
+   "qwen2.5-coder:1.5b",
+   "qwen2.5-coder:3b",
+   "llama3.2:3b",
+   "gemma3:4b",
+   "qwen2.5-coder:7b"
+  ],
+  "keyless_endpoints": [
+   {
+    "url": "https://text.pollinations.ai/openai",
+    "model": "openai"
+   }
+  ],
+  "keyless_model_lists": [
+   "https://text.pollinations.ai/models"
+  ]
+ },
+ "models": [
+  {
+   "tag": "qwen2.5-coder:1.5b",
+   "pull_rc": 0,
+   "pull_seconds": 4.8,
+   "show": "  Model\n    architecture        qwen2          \n    parameters          1.5B           \n    context length      32768          \n    embedding length    1536           \n    quantization        Q4_K_M         \n    template source     go_template    \n\n  Capabilities\n    completion    \n    tools         \n    insert        \n\n  System\n    You are Qwen, created by Alibaba Cloud. You are a helpful assistant.    \n\n  License\n    Apache License               \n    Version 2.0, January 2004    \n    ...                          \n\n",
+   "list": [
+    "qwen2.5-coder:1.5b    d7372fd82851    986 MB    Less than a second ago    "
+   ],
+   "chat_status": 200,
+   "chat_seconds": 121.9,
+   "prompt_tokens": 3401,
+   "prompt_tok_per_s": 28.7,
+   "gen_tokens": 18,
+   "gen_tok_per_s": 9.0,
+   "load_seconds": 1.6,
+   "reply_head": "Red sphere on wooden table,\nSilent, yet vibrant,\nGlassy, clear.",
+   "second_request_seconds": 1.57,
+   "second_prompt_eval_count": 3385,
+   "openai_compat_status": 200
+  },
+  {
+   "tag": "qwen2.5-coder:3b",
+   "pull_rc": 0,
+   "pull_seconds": 8.6,
+   "show": "  Model\n    architecture        qwen2          \n    parameters          3.1B           \n    context length      32768          \n    embedding length    2048           \n    quantization        Q4_K_M         \n    template source     go_template    \n\n  Capabilities\n    completion    \n    tools         \n    insert        \n\n  System\n    You are Qwen, created by Alibaba Cloud. You are a helpful assistant.    \n\n  License\n    Qwen RESEARCH LICENSE AGREEMENT                                     \n    Qwen RESEARCH LICENSE AGREEMENT Release Date: September 19, 2024    \n    ...                                                                 \n\n",
+   "list": [
+    "qwen2.5-coder:3b    f72c60cabf62    1.9 GB    Less than a second ago    "
+   ],
+   "chat_status": 200,
+   "chat_seconds": 248.25,
+   "prompt_tokens": 3401,
+   "prompt_tok_per_s": 14.2,
+   "gen_tokens": 28,
+   "gen_tok_per_s": 4.8,
+   "load_seconds": 2.8,
+   "reply_head": "Red sphere on a wooden table,\nShimmering in the light,\nGlass properties:\n- Transparent\n- Breakable\n- Reflective",
+   "second_request_seconds": 2.61,
+   "second_prompt_eval_count": 3385,
+   "openai_compat_status": 200
+  },
+  {
+   "tag": "llama3.2:3b",
+   "pull_rc": 0,
+   "pull_seconds": 10.8,
+   "show": "  Model\n    architecture        llama          \n    parameters          3.2B           \n    context length      131072         \n    embedding length    3072           \n    quantization        Q4_K_M         \n    template source     go_template    \n\n  Capabilities\n    completion    \n    tools         \n\n  Parameters\n    stop    \"<|start_header_id|>\"    \n    stop    \"<|end_header_id|>\"      \n    stop    \"<|eot_id|>\"             \n\n  License\n    LLAMA 3.2 COMMUNITY LICENSE AGREEMENT                 \n    Llama 3.2 Version Release Date: September 25, 2024    \n    ...                                                   \n\n",
+   "list": [
+    "llama3.2:3b    a80c4f17acd5    2.0 GB    Less than a second ago    "
+   ],
+   "chat_status": 200,
+   "chat_seconds": 212.02,
+   "prompt_tokens": 2781,
+   "prompt_tok_per_s": 14.2,
+   "gen_tokens": 52,
+   "gen_tok_per_s": 4.2,
+   "load_seconds": 3.3,
+   "reply_head": "Red sphere on wood lies\nGently glowing in the night\nFragile, yet serene\n\n```\n{\n  \"color\": \"Transparent\",\n  \"density\": 2.5,\n  \"hardness\": 5.5\n}\n```",
+   "second_request_seconds": 3.3,
+   "second_prompt_eval_count": 2765,
+   "openai_compat_status": 200
+  },
+  {
+   "tag": "gemma3:4b",
+   "pull_rc": 0,
+   "pull_seconds": 18.4,
+   "show": "  Model\n    architecture        gemma3         \n    parameters          3.9B           \n    context length      131072         \n    embedding length    2560           \n    quantization        Q4_K_M         \n    requires            0.30.0         \n    template source     go_template    \n\n  Capabilities\n    completion    \n    vision        \n\n  Projector\n    architecture        clip       \n    parameters          419.82M    \n    embedding length    1152       \n    dimensions          2560       \n\n  Parameters\n    stop           \"<end_of_turn>\"    \n    temperature    1                  \n    top_k          64                 \n    top_p          0.95               \n\n  License\n    Gemma Terms of Use                  \n    Last modified: February 21, 2024    \n    ...                                 \n\n",
+   "list": [
+    "gemma3:4b    68ceab7e468a    3.4 GB    Less than a second ago    "
+   ],
+   "chat_status": 200,
+   "chat_seconds": 309.98,
+   "prompt_tokens": 3564,
+   "prompt_tok_per_s": 13.2,
+   "gen_tokens": 160,
+   "gen_tok_per_s": 4.4,
+   "load_seconds": 4.1,
+   "reply_head": "Okay, here's a haiku about a red sphere on a wooden table:\n\nCrimson orb rests still,\nWood\u2019s warm surface, silent grace,\nRed light softly glows.\n\n---\n\nAnd here\u2019s a JSON representation of three physical properties of glass:\n\n```json\n{\n  \"property1\": {\n    \"name\": \"Refractive Index\",\n    \"value\": 1.5 -",
+   "second_request_seconds": 2.76,
+   "second_prompt_eval_count": 3548,
+   "openai_compat_status": 200
+  },
+  {
+   "tag": "qwen2.5-coder:7b",
+   "pull_rc": 0,
+   "pull_seconds": 26.2,
+   "show": "  Model\n    architecture        qwen2          \n    parameters          7.6B           \n    context length      32768          \n    embedding length    3584           \n    quantization        Q4_K_M         \n    template source     go_template    \n\n  Capabilities\n    completion    \n    tools         \n    insert        \n\n  System\n    You are Qwen, created by Alibaba Cloud. You are a helpful assistant.    \n\n  License\n    Apache License               \n    Version 2.0, January 2004    \n    ...                          \n\n",
+   "list": [
+    "qwen2.5-coder:7b    dae161e27b0e    4.7 GB    Less than a second ago    "
+   ],
+   "chat_status": 200,
+   "chat_seconds": 607.55,
+   "prompt_tokens": 3401,
+   "prompt_tok_per_s": 6.4,
+   "gen_tokens": 82,
+   "gen_tok_per_s": 2.2,
+   "load_seconds": 41.1,
+   "reply_head": "Red sphere on wood,\nTable's surface, smooth and cool,\nSilent, yet so bright.\n\n```json\n{\n  \"property\": \"p0\",\n  \"value\": 0.5\n}\n{\n  \"property\": \"p1\",\n  \"value\": 1.2\n}\n{\n  \"property\": \"p2\",\n  \"value\": 2.3\n}\n```",
+   "second_request_seconds": 5.39,
+   "second_prompt_eval_count": 3385,
+   "openai_compat_status": 200
+  }
+ ],
+ "keyless_hosted": [
+  {
+   "url": "https://text.pollinations.ai/openai",
+   "model": "openai",
+   "status": 200,
+   "seconds": 0.97,
+   "body_head": "{\"id\":\"pllns_769d554f3ab2da6feff065ce687c05bf\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"ok\",\"reasoning\":\"The instruction: The user says: \\\"Reply with the single word: ok\\\"\\n\\nSo the answer: \\\"ok\\\" as a single word.\",\"tool_calls\":[]},\"finish_reason\":\"stop\"}],\"created\":1791821243,\"model\":\"gpt-oss-20b\",\"object\":\"chat.completion\",\"usage\":{\"prompt_tokens\":315,\"completion_tokens\":39,\"total_tokens\":354},\"user_tier\":\"anonymous\"}",
+   "long_status": 200,
+   "long_seconds": 22.93,
+   "long_body_head": "{\"id\":\"pllns_7b50c1d7eb7dc3da56bc53929e56fa47\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"**Haiku**\\n\\nRed sphere glows softly  \\nOn the worn oak table rests  \\nQuiet, still, it waits  \\n\\n**Physical properties of glass (JSON)**\\n\\n```json\\n[\\n  {\\\"property\\\":\\\"transparency\\\",\\\"value\\\":\\\"high\\\"},\\n  {\\\"property\\\":\\\"hardness\\\",\\\"value\\\":\\\"6\u20137 on the Mohs scale\\\"},\\n  {\\\"property\\\":\\\"fragility\\\",\\\"value\\\":\\\"brittle, prone to shattering\\\"}\\n]\\n```\\n\",\"reasoning\":\"We need to produce a haiku about a red sphere on a wooden table. Then list three physical properties of glass as JSON. The JSON should be a list or object? \\\"list three physical properties of glass as JSON.\\\" Likely an array of objects or key-value pairs. Could be something like:\\n\\n{\\n  \\\"properties\\\": [\\n    {\\\"name\\\":\\\"transparency\\\", \\\"value\\\":\\\"high\\\"},\\n    {\\\"name\\\":\\\"hardness\\\", \\\"value\\\":\\\"6-7 on Mohs\\\"},\\n    {\\\"name\\\":\\\"fragility\\\", \\\"value\\\":\\\"brittle\\\"}\\n  ]\\n}\\n\\nBut maybe simpler: {\\\"transparency\\\":\\\"high\\\",\\\"hardness\\\":\\\"6-7\\\",\\\"fragility\\\":\\\"brittle\\\"}.\\n\\nWe need to output both the haiku and the JSON. Probably separate sections. The haiku: 5-7-5 syllable structure. Let's craft: \\\"Red sphe"
+  }
+ ],
+ "ollama_version": "ollama version is 0.40.16",
+ "keyless_model_lists": [
+  {
+   "url": "https://text.pollinations.ai/models",
+   "status": 200,
+   "seconds": 0.06,
+   "body_head": "[{\"name\":\"openai-fast\",\"description\":\"GPT-OSS 20B Reasoning LLM (OVH)\",\"reasoning\":true,\"tier\":\"anonymous\",\"community\":false,\"input_modalities\":[\"text\"],\"output_modalities\":[\"text\"],\"tools\":true,\"aliases\":[\"openai\",\"gpt-oss\",\"gpt-oss-20b\",\"ovh-reasoning\"],\"vision\":false,\"audio\":false}]"
+  }
+ ],
+ "runner": "2\n               total        used        free      shared  buff/cache   available\nMem:            7932         822        6902          29         495        7110\n/dev/root        72G   63G  9.5G  87% /\nModel name:                              AMD EPYC 7763 64-Core Processor\nFlags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl tsc_reliable nonstop_tsc cpuid extd_apicid aperfmperf tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand hypervisor lahf_lm cmp_legacy \n",
+ "working_local_models": [
+  "qwen2.5-coder:1.5b",
+  "qwen2.5-coder:3b",
+  "llama3.2:3b",
+  "gemma3:4b",
+  "qwen2.5-coder:7b"
+ ]
+}

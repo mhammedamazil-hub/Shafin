@@ -1,0 +1,4 @@
+○ ollama.service - Ollama Service
+     Loaded: loaded (/etc/systemd/system/ollama.service; disabled; preset: enabled)
+     Active: inactive (dead)
+-- No entries --
