@@ -71,7 +71,18 @@ computer-graphics render, not a photograph.
 
 ## Language-model experiment
 
-PENDING_EXPERIMENT
+One run so far, nine attempts (three models, three scene descriptions, up to three rounds
+of text feedback each). Full account: [experiments/llm-run-1.md](experiments/llm-run-1.md).
+
+**No attempt produced a picture of the scene that was asked for.** Three of nine ended with
+a program that compiles; all three are near-copies of the worked example in the language
+reference, and the one meant to be a room at night is the example in daylight. Two of the
+six failures were the experiment's own fault (output-token limit too low for the hosted
+model). Small models (1.5B and 3B parameters) did not recover from a single compile error.
+
+The language was changed in response (it now accepts anything with one sensible reading
+and says what it assumed), and four of the six programs that failed in round 1 now compile.
+That is a fix made after seeing the data; it has not been tested on new data yet.
 
 ## Not done
 
@@ -104,7 +115,9 @@ PENDING_EXPERIMENT
 ## Resources used in the owner's GitHub account
 
 * **Actions minutes** (private repository, so these count against the account's quota):
-  ACTIONS_MINUTES
+  64 so far, in six workflow runs: 1 to build the toolchain bundle, 5 in three short probe
+  runs, 29 to measure model speeds, 29 for the first experiment. Counted as GitHub bills
+  them, each run rounded up to a whole minute. Every further experiment costs about 30.
 * **Hidden git refs** created by workflows (not branches; they do not show in the UI):
   * `refs/vl-bootstrap/toolchain` - the official Rust toolchain tarballs, about 200 MB.
     Needed only to rebuild the development sandbox. Remove with
