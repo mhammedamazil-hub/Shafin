@@ -32,7 +32,7 @@ pub struct Film {
 
 impl Default for Film {
     fn default() -> Film {
-        Film { width: 1280, height: 720, spp: 64, min_spp: 16, noise_target: 0.0, max_depth: 8, seed: 1, clamp_indirect: 20.0 }
+        Film { width: 1280, height: 720, spp: 64, min_spp: 16, noise_target: 0.0, max_depth: 12, seed: 1, clamp_indirect: 20.0 }
     }
 }
 

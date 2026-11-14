@@ -99,7 +99,30 @@ impl Vec3 {
     pub fn clamp(self, lo: f32, hi: f32) -> Vec3 {
         self.map(|v| v.clamp(lo, hi))
     }
-    /// Index of the largest absolute component.
+    /// Index of the largest component (signed comparison; ties go to the lower index).
+    #[inline]
+    pub fn argmax(self) -> usize {
+        if self.x >= self.y && self.x >= self.z {
+            0
+        } else if self.y >= self.z {
+            1
+        } else {
+            2
+        }
+    }
+    /// Index of the smallest component (signed comparison; ties go to the lower index).
+    #[inline]
+    pub fn argmin(self) -> usize {
+        if self.x <= self.y && self.x <= self.z {
+            0
+        } else if self.y <= self.z {
+            1
+        } else {
+            2
+        }
+    }
+    /// Index of the component with the largest ABSOLUTE value (the dominant axis).
+    /// Not an argmax: use `argmax` when signs matter.
     #[inline]
     pub fn max_dim(self) -> usize {
         let a = self.abs();

@@ -72,7 +72,7 @@ fn sdf_normal(shape: &Shape, p: Vec3) -> Vec3 {
             if m.length_sq() > 0.0 {
                 (m * sgn).normalize()
             } else {
-                let a = q.max_dim();
+                let a = q.argmax(); // the face we are closest to (all components are <= 0 here)
                 let mut n = Vec3::ZERO;
                 match a {
                     0 => n.x = sgn.x,
@@ -168,17 +168,12 @@ fn hit_box(half: Vec3, o: Vec3, d: Vec3, tmin: f32, tmax: f32) -> Option<(f32, u
     if !(tn <= tf) {
         return None;
     }
+    // entry: the slab whose near plane is crossed LAST; exit: the slab whose far plane is crossed FIRST
     let (t, axis, outward_positive) = if tn > tmin {
-        let axis = lo.max_dim();
+        let axis = lo.argmax();
         (tn, axis, d[axis] < 0.0)
     } else {
-        let axis = if hi.x <= hi.y && hi.x <= hi.z {
-            0
-        } else if hi.y <= hi.z {
-            1
-        } else {
-            2
-        };
+        let axis = hi.argmin();
         (tf, axis, d[axis] > 0.0)
     };
     if t > tmin && t < tmax {
@@ -477,6 +472,7 @@ mod tests {
             let (mut hits, mut misses, mut worst) = (0, 0, 0.0f32);
             let mut inside_rays = 0;
             let mut outside_hits = 0;
+            let mut normals_checked = 0;
             for i in 0..600 {
                 // half the rays start outside aiming near the shape, half start inside
                 let inside = i % 2 == 1;
@@ -519,6 +515,22 @@ mod tests {
                         assert!((ng.length() - 1.0).abs() < 1e-4);
                         let facing = ng.dot(d) < 0.0;
                         assert_eq!(facing, !inside, "{}: normal orientation (inside={inside})", shape.kind());
+                        // The normal must be the outward gradient of the implicit function. (Checking only
+                        // that it faces the ray is not enough: a box that reports the wrong FACE passes that.)
+                        let grad = |h: f32| {
+                            vec3(
+                                implicit(shape, p + Vec3::X * h) - implicit(shape, p - Vec3::X * h),
+                                implicit(shape, p + Vec3::Y * h) - implicit(shape, p - Vec3::Y * h),
+                                implicit(shape, p + Vec3::Z * h) - implicit(shape, p - Vec3::Z * h),
+                            )
+                            .normalize()
+                        };
+                        let (g1, g2) = (grad(2e-3), grad(4e-4));
+                        // near an edge or rim the gradient is discontinuous and the two estimates disagree: skip those
+                        if g1.dot(g2) > 0.9995 {
+                            normals_checked += 1;
+                            assert!(ng.dot(g2) > 0.995, "{}: normal {ng:?} but surface gradient {g2:?} at {p:?} (prim {})", shape.kind(), intersect(shape, &[], &[], o, d, 1e-5, 1e30).unwrap().prim);
+                        }
                     }
                     (None, None) => misses += 1,
                     // grazing rays can legitimately differ between a 40k-step reference and the exact solution
@@ -533,10 +545,34 @@ mod tests {
                     }
                 }
             }
-            println!("{:9} hits {hits:3} misses {misses:3} | inside rays {inside_rays} (all exit) | outside rays hitting {outside_hits:3} | worst distance error {worst:.2e}", shape.kind());
+            println!("{:9} hits {hits:3} misses {misses:3} | inside rays {inside_rays} (all exit) | outside rays hitting {outside_hits:3} | normals verified {normals_checked:3} | worst distance error {worst:.2e}", shape.kind());
             assert_eq!(inside_rays, 300);
+            assert!(normals_checked >= 300, "{}: only {normals_checked} normals could be checked", shape.kind());
             assert!(outside_hits >= 50 && misses >= 50, "{}: need both hits and misses from outside to be a meaningful test", shape.kind());
             assert!(worst < 3e-4, "{}: worst error {worst}", shape.kind());
+        }
+    }
+
+    #[test]
+    fn box_reports_the_face_that_was_hit() {
+        // Regression: a ray travelling straight up into the underside of a thin slab used to be
+        // given an X-face normal, because the entry face was chosen by largest ABSOLUTE slab distance.
+        let slab = Shape::Box { half: vec3(1.0, 0.01, 1.0), round: 0.0 };
+        let cases = [
+            (vec3(0.0, -1.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, -1.0, 0.0)),
+            (vec3(0.0, -1.0, 0.0), vec3(0.02, 1.0, 0.01), vec3(0.0, -1.0, 0.0)),
+            (vec3(0.3, 2.0, -0.2), vec3(0.1, -1.0, 0.05), vec3(0.0, 1.0, 0.0)),
+            (vec3(-3.0, 0.001, 0.2), vec3(1.0, 0.0, 0.0), vec3(-1.0, 0.0, 0.0)),
+            (vec3(0.2, 0.002, 5.0), vec3(0.0, 0.0, -2.0), vec3(0.0, 0.0, 1.0)),
+            // from inside: exits through the top face
+            (vec3(0.1, 0.0, 0.1), vec3(0.3, 1.0, 0.2), vec3(0.0, 1.0, 0.0)),
+            (vec3(0.1, 0.0, 0.1), vec3(1.0, 0.001, 0.0), vec3(1.0, 0.0, 0.0)),
+        ];
+        for (o, d, want) in cases {
+            let h = intersect(&slab, &[], &[], o, d, 1e-6, 1e30).unwrap();
+            let (ng, ns) = normals(&slab, &[], o + d * h.t, &h);
+            assert_eq!(ng, want, "ray {o:?} -> {d:?}");
+            assert_eq!(ns, want);
         }
     }
 

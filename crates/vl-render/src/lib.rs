@@ -2,4 +2,7 @@
 #![forbid(unsafe_code)]
 
 pub mod accel;
+pub mod bsdf;
 pub mod geom;
+pub mod integrator;
+pub mod rt;
