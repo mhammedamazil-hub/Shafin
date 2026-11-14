@@ -1,0 +1,40 @@
+error[E202]: unknown kind of object 'bowl'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/fruit-bowl/round0.vl:2:1
+   | bowl { size: [0.2, 0.03, 0.14], on: table, at: [0.35, 0.1], color: navy }
+   | ^^^^
+   = hint: build it from simple shapes (sphere, box, cylinder, cone, torus, capsule, cup, tube, plane, disk, rect) inside a  group name { ... }, or declare a reusable kind with  define bowl() { ... }
+error[E202]: unknown kind of object 'orange1'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/fruit-bowl/round0.vl:5:1
+   | orange1 { radius: 0.04, height: 0.1, on: bowl, material: ceramic }
+   | ^^^^^^^
+   = hint: build it from simple shapes (sphere, box, cylinder, cone, torus, capsule, cup, tube, plane, disk, rect) inside a  group name { ... }, or declare a reusable kind with  define orange1() { ... }
+error[E202]: unknown kind of object 'orange2'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/fruit-bowl/round0.vl:6:1
+   | orange2 { radius: 0.04, height: 0.1, on: bowl, material: ceramic }
+   | ^^^^^^^
+   = hint: build it from simple shapes (sphere, box, cylinder, cone, torus, capsule, cup, tube, plane, disk, rect) inside a  group name { ... }, or declare a reusable kind with  define orange2() { ... }
+error[E202]: unknown kind of object 'orange3'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/fruit-bowl/round0.vl:7:1
+   | orange3 { radius: 0.04, height: 0.1, on: bowl, material: ceramic }
+   | ^^^^^^^
+   = hint: build it from simple shapes (sphere, box, cylinder, cone, torus, capsule, cup, tube, plane, disk, rect) inside a  group name { ... }, or declare a reusable kind with  define orange3() { ... }
+error[E202]: unknown kind of object 'orange4'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/fruit-bowl/round0.vl:8:1
+   | orange4 { radius: 0.04, height: 0.1, on: bowl, material: ceramic }
+   | ^^^^^^^
+   = hint: build it from simple shapes (sphere, box, cylinder, cone, torus, capsule, cup, tube, plane, disk, rect) inside a  group name { ... }, or declare a reusable kind with  define orange4() { ... }
+error[E202]: unknown kind of object 'glass'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/fruit-bowl/round0.vl:11:1
+   | glass { radius: 0.04, height: 0.1, on: bowl, material: glass }
+   | ^^^^^
+   = hint: build it from simple shapes (sphere, box, cylinder, cone, torus, capsule, cup, tube, plane, disk, rect) inside a  group name { ... }, or declare a reusable kind with  define glass() { ... }
+error[E202]: unknown kind of object 'table'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/fruit-bowl/round0.vl:14:1
+   | table { size: [1.4, 0.75, 0.8], material: wood }
+   | ^^^^^
+   = hint: build it from simple shapes (sphere, box, cylinder, cone, torus, capsule, cup, tube, plane, disk, rect) inside a  group name { ... }, or declare a reusable kind with  define table() { ... }
+error[E204]: 'look_at' must be an object or a point [x, y, z], not a word
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/fruit-bowl/round0.vl:20:19
+   | camera { look_at: table, azimuth: 25, elevation: 20 }
+   |                   ^^^^^
+   = hint: for example  look_at: table

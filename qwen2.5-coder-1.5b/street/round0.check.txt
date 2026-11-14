@@ -1,0 +1,25 @@
+error[E113]: expected '{' to start the body of 'street_lamp_ball', found ':'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/street/round0.vl:11:24
+   |     street_lamp_ball at: [0, 0.1, 0.2]
+   |                        ^
+   = hint: a statement has the form:  kind name { property: value }
+error[E232]: the property 'at' is not inside an object (also on lines 14, 22, 24)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/street/round0.vl:12:17
+   |     street_lamp at: [0.5, 0.1, 0.2]
+   |                 ^^
+   = hint: properties belong inside a block:  kind name { property: value }
+error[E113]: expected '{' to start the body of 'street_lamp', found ':'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/street/round0.vl:13:19
+   |     street_lamp at: [1, 0.1, 0.2]
+   |                   ^
+   = hint: a statement has the form:  kind name { property: value }
+error[E113]: expected '{' to start the body of 'car_wheel', found ':' (also on line 23)
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/street/round0.vl:21:17
+   |     car_wheel at: [0.2, 0.1, 0.2 + i * 0.1]
+   |                 ^
+   = hint: a statement has the form:  kind name { property: value }
+error[E113]: expected '{' to start the body of 'car_body', found ':'
+  --> /home/runner/work/_temp/out/qwen2.5-coder-1.5b/street/round0.vl:28:12
+   | car_body at: [0.5, 0.1, 0.2]
+   |            ^
+   = hint: a statement has the form:  kind name { property: value }

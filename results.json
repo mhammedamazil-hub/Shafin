@@ -1,0 +1,201 @@
+{
+ "request": {
+  "request_id": 2,
+  "purpose": "Second measurement, on prompts no model output has been seen for and with one model family the compiler was never tried on: can small text-only LLMs write VL from the one-page reference, and does the tool's feedback let them repair their programs?",
+  "notes": [
+   "The compiler and the reference were changed after run 1 using run 1's transcripts. Run 1's prompts are therefore not reused here.",
+   "llama3.2:3b is new in this run: no output of that model was seen while the language was being changed.",
+   "The three prompts were fixed before any model saw them. None resembles the worked example in the reference."
+  ],
+  "time_budget_minutes": 34,
+  "max_rounds": 3,
+  "num_predict": 800,
+  "hosted_pause_seconds": 16,
+  "render": {
+   "width": 480,
+   "samples": 24
+  },
+  "backends": [
+   {
+    "name": "qwen2.5-coder-1.5b",
+    "type": "ollama",
+    "model": "qwen2.5-coder:1.5b"
+   }
+  ],
+  "prompts": [
+   {
+    "id": "billiards",
+    "text": "Three billiard balls - one red, one yellow, one black - lying next to each other on a table covered with green cloth, lit by a single lamp hanging above the table. The room is dark."
+   },
+   {
+    "id": "fruit-bowl",
+    "text": "A white bowl holding four oranges, standing on a kitchen counter, with a drinking glass beside it, in morning sunlight."
+   },
+   {
+    "id": "street",
+    "text": "A street at dusk: a grey road, a row of four street lamps along one side (each a tall thin pole with a glowing ball on top) and a red car made of two boxes with four dark wheels."
+   }
+  ]
+ },
+ "reference_words": 948,
+ "runs": [
+  {
+   "backend": "qwen2.5-coder-1.5b",
+   "prompt": "billiards",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 32.7,
+      "prompt_tokens": 1837,
+      "output_tokens": 218,
+      "prompt_eval_seconds": 20.5,
+      "generation_seconds": 10.9
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 2,
+     "codes": [
+      "W322",
+      "W342"
+     ],
+     "visual_findings": [],
+     "outcome": "valid"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 10.9,
+      "prompt_tokens": 2826,
+      "output_tokens": 2,
+      "prompt_eval_seconds": 10.9,
+      "generation_seconds": 0.1
+     },
+     "outcome": "model declared the picture finished"
+    }
+   ],
+   "status": "valid program",
+   "declared_done_with_open_remarks": 2,
+   "final_valid": true,
+   "final_open_remarks": 2,
+   "first_attempt_valid": true,
+   "rounds_used": 2,
+   "final_program": "qwen2.5-coder-1.5b/billiards/round0.vl",
+   "render": {
+    "output": "/home/runner/work/_temp/out/qwen2.5-coder-1.5b/billiards/final.png",
+    "width": 480,
+    "height": 270,
+    "samples": 24,
+    "seconds": 8.18,
+    "million_rays": 10.66,
+    "exposure_ev": 1.82,
+    "png_bytes": 207762,
+    "image_hash": "5b01555931ff4691"
+   },
+   "final_findings": [],
+   "final_warnings": [
+    "W322",
+    "W342"
+   ]
+  },
+  {
+   "backend": "qwen2.5-coder-1.5b",
+   "prompt": "fruit-bowl",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 14.2,
+      "prompt_tokens": 1819,
+      "output_tokens": 271,
+      "prompt_eval_seconds": 0.7,
+      "generation_seconds": 13.5
+     },
+     "valid": false,
+     "errors": 8,
+     "warnings": 0,
+     "codes": [
+      "E202",
+      "E202",
+      "E202",
+      "E202",
+      "E202",
+      "E202",
+      "E202",
+      "E204"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 26.7,
+      "prompt_tokens": 2883,
+      "output_tokens": 271,
+      "prompt_eval_seconds": 11.0,
+      "generation_seconds": 15.6
+     },
+     "outcome": "identical resubmission"
+    }
+   ],
+   "status": "no valid program",
+   "identical_resubmission": true,
+   "final_valid": false,
+   "final_open_remarks": null,
+   "first_attempt_valid": false,
+   "rounds_used": 2
+  },
+  {
+   "backend": "qwen2.5-coder-1.5b",
+   "prompt": "street",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 22.7,
+      "prompt_tokens": 1839,
+      "output_tokens": 434,
+      "prompt_eval_seconds": 1.0,
+      "generation_seconds": 21.6
+     },
+     "valid": false,
+     "errors": 5,
+     "warnings": 0,
+     "codes": [
+      "E113",
+      "E232",
+      "E113",
+      "E113",
+      "E113"
+     ],
+     "outcome": "errors"
+    },
+    {
+     "round": 1,
+     "llm": {
+      "status": 200,
+      "seconds": 32.4,
+      "prompt_tokens": 2833,
+      "output_tokens": 434,
+      "prompt_eval_seconds": 7.5,
+      "generation_seconds": 24.9
+     },
+     "outcome": "identical resubmission"
+    }
+   ],
+   "status": "no valid program",
+   "identical_resubmission": true,
+   "final_valid": false,
+   "final_open_remarks": null,
+   "first_attempt_valid": false,
+   "rounds_used": 2
+  }
+ ],
+ "vl_version": "vl 0.1.0",
+ "elapsed_minutes": 2.8
+}

@@ -1,0 +1,10 @@
+```vl
+plane ground { material: concrete }
+box table { size: [1.4, 0.75, 0.8], material: wood }
+sphere ball1 { radius: 0.1, on: table, at: [-0.3, 0], color: red, material: plastic }
+sphere ball2 { radius: 0.1, on: table, at: [0.3, 0], color: yellow, material: plastic }
+sphere ball3 { radius: 0.1, on: table, at: [0.0, 0.4], color: black, material: plastic }
+box cloth { size: [1.4, 0.75, 0.8], material: green }
+light lamp { at: [0.5, 1.8, 0.5], power: 1200, temperature: 3000 }
+camera { look_at: table, azimuth: 25, elevation: 20 }
+```

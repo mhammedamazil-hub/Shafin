@@ -1,0 +1,34 @@
+# Street at dusk
+
+# Define the road
+plane ground { material: grey }
+
+# Define the street lamps
+for i in 1..4 {
+    # Each street lamp is a tall thin pole with a glowing ball on top
+    box street_lamp { size: [0.5, 0.2, 0.3], material: plastic, color: white }
+    sphere street_lamp_ball { radius: 0.05, color: red, material: plastic }
+    street_lamp_ball at: [0, 0.1, 0.2]
+    street_lamp at: [0.5, 0.1, 0.2]
+    street_lamp at: [1, 0.1, 0.2]
+    street_lamp at: [1.5, 0.1, 0.2]
+}
+
+# Define the red car
+box car_body { size: [0.8, 0.2, 0.4], material: steel, color: red }
+box car_wheel { size: [0.05, 0.05, 0.05], material: steel, color: black }
+for i in 1..4 {
+    car_wheel at: [0.2, 0.1, 0.2 + i * 0.1]
+    car_wheel at: [0.6, 0.1, 0.2 + i * 0.1]
+    car_wheel at: [1.2, 0.1, 0.2 + i * 0.1]
+    car_wheel at: [1.6, 0.1, 0.2 + i * 0.1]
+}
+
+# Define the car body
+car_body at: [0.5, 0.1, 0.2]
+
+# Define the sky
+sky { time: dusk }
+
+# Define the camera
+camera { look_at: car_body, azimuth: 30, elevation: 20 }
