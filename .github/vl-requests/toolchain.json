@@ -1,0 +1,8 @@
+{
+  "note": "Changing this file on an arena/** branch triggers .github/workflows/vl-bootstrap-toolchain.yml",
+  "request_id": 1,
+  "channel": "stable",
+  "host": "x86_64-unknown-linux-gnu",
+  "components": ["rustc", "cargo", "rust-std", "clippy-preview", "rustfmt-preview"],
+  "extra_std_targets": ["x86_64-unknown-linux-musl", "wasm32-wasip1"]
+}
