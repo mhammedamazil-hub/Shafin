@@ -52,3 +52,18 @@ the papers' own. The synthesised report is `01-research-report.md`.
 | MCP | https://modelcontextprotocol.io (revisions 2025-06-18, 2025-11-25, 2026-07-28) | JSON-RPC tool protocol. 2026-07-28 removed the initialize handshake/sessions; older clients still send `initialize`. |
 | GitHub Models | docs.github.com/en/github-models; endpoint `https://models.github.ai/inference` | OpenAI-compatible; usable from Actions with `permissions: models: read`; free tier ~8K input / 4K output tokens per request, 50-150 requests/day. |
 | Rust FP determinism | Rust std docs (`f64::ln` etc.: "precision ... is non-deterministic"), community reports | +,-,*,/,sqrt are IEEE-exact everywhere; transcendental functions come from the platform libm and differ across platforms -> need an in-tree math kernel for bit-reproducible rendering. |
+
+## E. Findings from probing the environment (measured 2026-11-14, not from literature)
+
+* **GitHub Models is gone.** A GitHub-hosted runner calling `https://models.github.ai/catalog/models`
+  and `/inference/chat/completions` with `permissions: models: read` gets `HTTP 200`, `content-type: text/plain`,
+  body `OK` (4 bytes) in ~10 ms - no model output. `models.inference.ai.azure.com` no longer resolves.
+  docs.github.com/en/github-models states: "As of July 30, 2026, GitHub Models has been fully retired."
+  Search results that still describe it as a free CI LLM endpoint are stale. Consequence: multi-LLM
+  validation cannot use a token-free hosted endpoint; it uses open-weight models run locally on the
+  runner CPU (which also matches the project's "local LLM, CPU only" constraint), plus any
+  OpenAI-compatible endpoint the user supplies a key for.
+* The sandbox reaches only github.com / api.github.com / codeload.github.com / PyPI / npm. The Rust
+  toolchain was obtained by a workflow that downloads the official tarballs on a runner, verifies
+  SHA-256 against the official channel manifest and publishes them on a hidden git ref
+  (`tools/dev/bootstrap-sandbox.sh`).

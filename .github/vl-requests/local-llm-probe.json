@@ -1,0 +1,21 @@
+{
+  "request_id": 1,
+  "ollama_models": [
+    "qwen2.5-coder:1.5b",
+    "qwen2.5-coder:3b",
+    "qwen2.5-coder:7b",
+    "llama3.2:3b",
+    "gemma3:4b",
+    "phi4-mini",
+    "qwen3:4b",
+    "granite3.3:2b",
+    "mistral:7b",
+    "llama3.1:8b",
+    "qwen3-coder:latest",
+    "gemma3n:e4b",
+    "deepseek-coder-v2:latest"
+  ],
+  "keyless_endpoints": [
+    {"url": "https://text.pollinations.ai/openai", "model": "openai"}
+  ]
+}

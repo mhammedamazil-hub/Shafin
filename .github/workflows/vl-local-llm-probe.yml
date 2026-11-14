@@ -1,0 +1,48 @@
+# Research plumbing: measures which open-weight text LLMs a GitHub-hosted CPU
+# runner can serve locally with Ollama (no accounts, no API keys), and how fast.
+# Runs only when .github/vl-requests/local-llm-probe.json changes.
+name: vl-local-llm-probe
+
+on:
+  push:
+    branches: ["arena/**"]
+    paths: [".github/vl-requests/local-llm-probe.json"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vl-local-llm-probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Ollama
+        run: |
+          set -euo pipefail
+          curl -fsSL https://ollama.com/install.sh | sh
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:11434/api/version && break || sleep 1; done
+      - name: Probe
+        id: probe
+        run: |
+          set -uo pipefail
+          mkdir -p "$RUNNER_TEMP/out"
+          python3 tools/ci/local_llm_probe.py .github/vl-requests/local-llm-probe.json "$RUNNER_TEMP/out" 2>&1 | tee "$RUNNER_TEMP/out/probe.log"
+      - name: Publish to refs/vl-results/local-llm-probe
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/out" && cd "$RUNNER_TEMP/out"
+          printf '{"run_id":"%s","source_sha":"%s","outcome":"%s"}\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "${{ steps.probe.outcome }}" > status.json
+          git init -q .
+          git config user.name "vl-bot"
+          git config user.email "vl-bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "local llm probe (run $GITHUB_RUN_ID)"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/vl-results/local-llm-probe
