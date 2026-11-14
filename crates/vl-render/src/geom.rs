@@ -235,6 +235,83 @@ fn hit_cone(r0: f32, r1: f32, h: f32, o: Vec3, d: Vec3, tmin: f32, tmax: f32) ->
     }
 }
 
+/// The two parameters at which a ray meets the infinite cone whose radius at height y is
+/// `rm + k * y` (NaN where there is no intersection).
+#[inline]
+fn cone_roots(rm: f32, k: f32, o: Vec3, d: Vec3) -> [f32; 2] {
+    let ro = rm + k * o.y;
+    let a = d.x * d.x + d.z * d.z - k * k * d.y * d.y;
+    let b = o.x * d.x + o.z * d.z - k * ro * d.y;
+    let c = o.x * o.x + o.z * o.z - ro * ro;
+    if a.abs() > 1e-12 {
+        let disc = b * b - a * c;
+        if disc >= 0.0 {
+            let sq = disc.sqrt();
+            let q = if b < 0.0 { -b + sq } else { -b - sq };
+            return [q / a, if q != 0.0 { c / q } else { f32::NAN }];
+        }
+        [f32::NAN, f32::NAN]
+    } else if b.abs() > 1e-12 {
+        [-c / (2.0 * b), f32::NAN]
+    } else {
+        [f32::NAN, f32::NAN]
+    }
+}
+
+/// Hollow vessel (see `Shape::Cup`). Every piece of its surface is tried and the nearest
+/// valid hit wins: outer side (0), underside (1), rim (2), inner side (3), inner floor (4).
+fn hit_cup(r0: f32, r1: f32, h: f32, wall: f32, floor: f32, o: Vec3, d: Vec3, tmin: f32, tmax: f32) -> Option<(f32, u32)> {
+    let k = (r1 - r0) / (2.0 * h);
+    let rm = 0.5 * (r0 + r1);
+    let rmi = rm - wall;
+    let y_floor = -h + floor;
+    let mut best = tmax;
+    let mut code = u32::MAX;
+    for t in cone_roots(rm, k, o, d) {
+        if t > tmin && t < best {
+            let y = o.y + t * d.y;
+            if y.abs() <= h && rm + k * y >= 0.0 {
+                best = t;
+                code = 0;
+            }
+        }
+    }
+    for t in cone_roots(rmi, k, o, d) {
+        if t > tmin && t < best {
+            let y = o.y + t * d.y;
+            if y >= y_floor && y <= h && rmi + k * y >= 0.0 {
+                best = t;
+                code = 3;
+            }
+        }
+    }
+    if d.y != 0.0 {
+        // (height, outer radius, inner radius of the ring that is solid there, code)
+        let ri_top = (r1 - wall).max(0.0);
+        let ri_bottom = if floor > 0.0 { 0.0 } else { (r0 - wall).max(0.0) };
+        let planes = [(h, r1, ri_top, 2u32), (-h, r0, ri_bottom, 1u32), (y_floor, (rmi + k * y_floor).max(0.0), 0.0, 4u32)];
+        for (i, (yc, ro, ri, c)) in planes.into_iter().enumerate() {
+            if ro <= 0.0 || (i == 2 && floor <= 0.0) {
+                continue;
+            }
+            let t = (yc - o.y) / d.y;
+            if t > tmin && t < best {
+                let (x, z) = (o.x + t * d.x, o.z + t * d.z);
+                let rho2 = x * x + z * z;
+                if rho2 <= ro * ro && rho2 >= ri * ri {
+                    best = t;
+                    code = c;
+                }
+            }
+        }
+    }
+    if code == u32::MAX {
+        None
+    } else {
+        Some((best, code))
+    }
+}
+
 #[inline]
 fn hit_triangle(p0: Vec3, p1: Vec3, p2: Vec3, o: Vec3, d: Vec3, tmin: f32, tmax: f32) -> Option<(f32, f32, f32)> {
     let e1 = p1 - p0;
@@ -276,6 +353,7 @@ pub fn intersect(shape: &Shape, meshes: &[Mesh], mesh_rt: &[MeshRt], o: Vec3, d:
             }
         }
         Shape::Cone { r0, r1, half_h } => hit_cone(r0, r1, half_h, o, d, tmin, tmax).map(|(t, f)| hit(t, f)),
+        Shape::Cup { r0, r1, half_h, wall, floor } => hit_cup(r0, r1, half_h, wall, floor, o, d, tmin, tmax).map(|(t, f)| hit(t, f)),
         Shape::Torus { .. } | Shape::Capsule { .. } => trace_sdf(shape, &shape.local_bounds(meshes), o, d, tmin, tmax).map(|t| hit(t, 0)),
         Shape::Disk { r } => {
             let t = -o.y / d.y;
@@ -357,6 +435,19 @@ pub fn normals(shape: &Shape, meshes: &[Mesh], p: Vec3, h: &LocalHit) -> (Vec3, 
             };
             (n, n)
         }
+        Shape::Cup { r0, r1, half_h, .. } => {
+            let k = (r1 - r0) / (2.0 * half_h);
+            let rho = (p.x * p.x + p.z * p.z).sqrt();
+            // the side normals of the outer and the inner cone are parallel; the inner one faces the axis
+            let side = vec3(p.x, -k * rho, p.z).normalize();
+            let n = match h.prim {
+                1 => vec3(0.0, -1.0, 0.0),
+                2 | 4 => Vec3::Y,
+                3 => -side,
+                _ => side,
+            };
+            (n, n)
+        }
         Shape::Torus { .. } | Shape::Capsule { .. } => {
             let n = sdf_normal(shape, p);
             (n, n)
@@ -393,7 +484,7 @@ pub fn uv(shape: &Shape, meshes: &[Mesh], p: Vec3, h: &LocalHit) -> Vec3 {
                 _ => vec3(q.x, q.y, 0.0),
             }
         }
-        Shape::Cone { half_h, .. } | Shape::Capsule { half_h, .. } => vec3(around(p.x, p.z), (p.y / half_h.max(1e-9)) * 0.5 + 0.5, 0.0),
+        Shape::Cone { half_h, .. } | Shape::Capsule { half_h, .. } | Shape::Cup { half_h, .. } => vec3(around(p.x, p.z), (p.y / half_h.max(1e-9)) * 0.5 + 0.5, 0.0),
         Shape::Torus { major, .. } => {
             let l = (p.x * p.x + p.z * p.z).sqrt();
             vec3(around(p.x, p.z), dmath::atan2(p.y, l - major) * (0.5 * dmath::INV_PI32) + 0.5, 0.0)
@@ -425,6 +516,14 @@ mod tests {
             Shape::Cone { r0, r1, half_h } => {
                 let radius = r0 + (r1 - r0) * (p.y + half_h) / (2.0 * half_h);
                 ((p.x * p.x + p.z * p.z).sqrt() - radius).max(p.y.abs() - half_h)
+            }
+            Shape::Cup { r0, r1, half_h, wall, floor } => {
+                // the cone, minus everything nearer the axis than the wall and above the bottom
+                let radius = r0 + (r1 - r0) * (p.y + half_h) / (2.0 * half_h);
+                let rho = (p.x * p.x + p.z * p.z).sqrt();
+                let outer = (rho - radius).max(p.y.abs() - half_h);
+                let cavity = (rho - (radius - wall)).max((-half_h + floor) - p.y);
+                outer.max(-cavity)
             }
             _ => sdf(shape, p),
         }
@@ -466,6 +565,10 @@ mod tests {
             Shape::Cone { r0: 0.2, r1: 0.5, half_h: 0.4 },
             Shape::Torus { major: 0.6, minor: 0.2 },
             Shape::Capsule { r: 0.25, half_h: 0.5 },
+            // a mug, a flared bowl, and a tube open at both ends that narrows upwards
+            Shape::Cup { r0: 0.4, r1: 0.4, half_h: 0.5, wall: 0.06, floor: 0.1 },
+            Shape::Cup { r0: 0.2, r1: 0.7, half_h: 0.3, wall: 0.08, floor: 0.07 },
+            Shape::Cup { r0: 0.6, r1: 0.35, half_h: 0.4, wall: 0.1, floor: 0.0 },
         ];
         let mut r = Rng::new(11, 3);
         for shape in &shapes {

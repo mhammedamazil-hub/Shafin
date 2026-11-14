@@ -237,9 +237,14 @@ impl<'a> Parser<'a> {
                 return self.err("E115", open, "this '{' is never closed".to_string(), "add a matching '}'");
             }
             let before = self.pos;
-            let item = if matches!(self.peek(), Tok::Ident(s) if !KEYWORDS.contains(&s.as_str())) && matches!(self.peek_at(1), Tok::Colon | Tok::Assign) {
+            // "in" is a keyword in  for i in a..b  and also a relation:  in: bowl
+            let item = if matches!(self.peek(), Tok::Ident(s) if !KEYWORDS.contains(&s.as_str()) || s == "in") && matches!(self.peek_at(1), Tok::Colon | Tok::Assign) {
                 // property:  key: value   (key = value is accepted too)
-                let (key, key_span) = self.ident("for a property")?;
+                let (key, key_span) = match self.peek().clone() {
+                    Tok::Ident(s) => (s, self.span()),
+                    _ => unreachable!("guarded by the test above"),
+                };
+                self.bump();
                 self.bump();
                 self.expr().map(|value| Item::Prop { key, key_span, value })
             } else {

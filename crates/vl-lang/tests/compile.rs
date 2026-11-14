@@ -436,3 +436,105 @@ fn every_css_colour_and_material_word_is_understood() {
     let d = codes("sphere s { material: unobtainium }");
     assert!(d.len() == 1 && d[0].0 == "W341" && d[0].1.contains("plain surface") && d[0].2.contains("snow"), "{d:?}");
 }
+
+#[test]
+fn hollow_vessels_and_things_put_in_them() {
+    let c = ok(r#"
+        plane ground { }
+        box table { size: [1.2, 0.75, 0.8], material: wood }
+        cup bowl { radius: 5cm, top_radius: 12cm, height: 7cm, wall: 5mm, floor: 1cm, on: table }
+        // `in` is a relation here and a keyword in the loop: both must work in one program
+        for i in 0..3 {
+            sphere orange { radius: 3cm, in: bowl, color: orange, material: plastic }
+        }
+        tube pipe { radius: 10cm, height: 0.5, wall: 1cm, at: [1.5, 0] }
+        cup mug { radius: 4cm, height: 9cm, on: table, at: [0.4, 0] }
+        sphere sugar { radius: 5mm, inside: mug }
+    "#);
+    assert_eq!(c.warning_count(), 0, "{:?}", c.diags);
+    let scene = c.scene.as_ref().unwrap();
+    let shape = |name: &str| {
+        let o = c.objects.iter().find(|o| o.name == name).unwrap();
+        scene.objects[o.scene_index.unwrap()].shape.clone()
+    };
+    assert!(matches!(shape("bowl"), Shape::Cup { r0, r1, half_h, wall, floor } if close(r0, 0.05) && close(r1, 0.12) && close(half_h, 0.035) && close(wall, 0.005) && close(floor, 0.01)));
+    assert!(matches!(shape("pipe"), Shape::Cup { floor, wall, .. } if floor == 0.0 && close(wall, 0.01)), "a tube is a cup without a floor");
+    // defaults: a wall of 8% of the radius and a floor one and a half walls thick
+    assert!(matches!(shape("mug"), Shape::Cup { wall, floor, .. } if close(wall, 0.0032) && close(floor, 0.0048)), "{:?}", shape("mug"));
+    // the first orange stands on the bowl's inner floor, in the middle
+    let (bmin, _) = bounds(&c, "bowl");
+    let (omin, omax) = bounds(&c, "orange");
+    assert!(close(omin.y, bmin.y + 0.01) && close((omin.x + omax.x) * 0.5, 0.0) && close((omin.z + omax.z) * 0.5, 0.0));
+    // the others found room beside it: no two share a centre, and all are inside the bowl's outline
+    let centres: Vec<Vec3> = ["orange", "orange_2", "orange_3"].iter().map(|n| (bounds(&c, n).0 + bounds(&c, n).1) * 0.5).collect();
+    for i in 0..3 {
+        for j in i + 1..3 {
+            assert!((centres[i] - centres[j]).length() > 0.0599, "oranges {i} and {j} are {} m apart", (centres[i] - centres[j]).length());
+        }
+        assert!(vec3(centres[i].x, 0.0, centres[i].z).length() < 0.12 - 0.03);
+    }
+    // the same colour for all three: the object called `orange` did not hide the colour word
+    let albedo = |name: &str| {
+        let o = c.objects.iter().find(|o| o.name == name).unwrap();
+        match &scene.materials[scene.objects[o.scene_index.unwrap()].material as usize].base_color {
+            Param::Const(c) => *c,
+            other => panic!("{other:?}"),
+        }
+    };
+    assert_eq!(albedo("orange"), albedo("orange_3"));
+    assert!(albedo("orange").x > albedo("orange").z * 2.0, "orange, not grey: {:?}", albedo("orange"));
+    let (smin, _) = bounds(&c, "sugar");
+    assert!(close(smin.y, bounds(&c, "mug").0.y + 0.0048), "'inside' is 'in'");
+}
+
+#[test]
+fn words_that_are_also_object_names_keep_their_meaning() {
+    // An object named after a material or a colour must not capture the word.
+    let c = ok(r#"
+        plane snow { material: snow }
+        box brick { size: [0.2, 0.1, 0.1], material: brick }
+        box brick { size: [0.2, 0.1, 0.1], on: brick, material: brick }
+        sphere gold { radius: 0.1, material: gold, at: [1, 0] }
+        sphere red { radius: 0.1, color: red, at: [-1, 0] }
+        sphere red { radius: 0.1, color: red, left_of: red }
+    "#);
+    // the only remarks are about the repeated names
+    let codes: Vec<&str> = c.diags.iter().map(|d| d.code).filter(|c| *c != "W301").collect();
+    assert!(codes.is_empty(), "{:?}", c.diags);
+    let scene = c.scene.as_ref().unwrap();
+    let mat = |name: &str| {
+        let o = c.objects.iter().find(|o| o.name == name).unwrap();
+        &scene.materials[scene.objects[o.scene_index.unwrap()].material as usize]
+    };
+    assert_eq!(mat("brick").name, mat("brick_2").name, "both bricks are brick");
+    assert!(mat("brick").name.contains("brick") && mat("gold").name.contains("gold"), "{} {}", mat("brick").name, mat("gold").name);
+    for n in ["red", "red_2"] {
+        assert!(matches!(&mat(n).base_color, Param::Const(c) if c.x > 0.5 && c.y < 0.1), "{n}: {:?}", mat(n).base_color);
+    }
+    // a variable still wins: the writer defined it
+    let c = ok("let red = #00ff00\nsphere s { radius: 0.1, color: red }\nplane g { }");
+    let scene = c.scene.as_ref().unwrap();
+    let o = c.objects.iter().find(|o| o.name == "s").unwrap();
+    match &scene.materials[scene.objects[o.scene_index.unwrap()].material as usize].base_color {
+        Param::Const(col) => assert!(col.y > 0.9 && col.x < 0.01, "{col:?}"),
+        other => panic!("{other:?}"),
+    }
+}
+
+#[test]
+fn things_too_wide_for_a_vessel_and_vague_relations_are_explained() {
+    let d = codes(r#"
+        plane ground { }
+        cup glass { radius: 3cm, height: 10cm }
+        box book { size: [0.2, 0.03, 0.15], in: glass }
+        sphere ball { radius: 5cm, next_to: glass }
+    "#);
+    let w349 = d.iter().find(|x| x.0 == "W349").unwrap_or_else(|| panic!("{d:?}"));
+    assert!(w349.1.contains("'glass'") && w349.1.contains("on top instead"), "{w349:?}");
+    let w350 = d.iter().find(|x| x.0 == "W350").unwrap_or_else(|| panic!("{d:?}"));
+    assert!(w350.1.contains("next_to") && w350.2.contains("left_of"), "{w350:?}");
+    assert!(d.iter().all(|x| x.0.starts_with('W')), "no errors: {d:?}");
+    // the article fits the noun
+    let d = codes("plane g { }\nsphere a { radius: 1 }\nsphere b { radius: a }");
+    assert!(d.iter().any(|x| x.1.contains("not an object")), "{d:?}");
+}

@@ -1,0 +1,19 @@
+# A bowl of fruit, a glass with ice and an egg in an egg cup. Nothing inside a vessel has
+# coordinates: `in: bowl` puts each thing where it comes to rest.
+render { size: [960, 540], samples: 96 }
+sky { time: morning, sun_azimuth: 230 }
+plane ground { material: plaster }
+box counter { size: [1.6, 0.9, 0.7], material: wood, color: #9a6a3c }
+cup bowl { radius: 6cm, top_radius: 15cm, height: 9cm, wall: 6mm, on: counter, at: [-0.1, 0], material: ceramic, color: white }
+for i in 0..5 {
+    sphere orange { radius: 3.6cm, in: bowl, color: orange, material: plastic }
+}
+sphere lemon { radius: 3cm, in: bowl, color: #f2d21f }
+sphere lime { radius: 2.8cm, in: bowl, color: #7fb52a }
+cup glass { radius: 3.3cm, top_radius: 3.8cm, height: 12cm, wall: 2mm, on: counter, at: [0.25, 0.1], material: glass }
+for i in 0..4 {
+    sphere ice { radius: 1.5cm, in: glass, material: ice }
+}
+cup eggcup { radius: 1.6cm, top_radius: 2.2cm, height: 4cm, wall: 2mm, on: counter, at: [0.42, 0.18], material: ceramic, color: #3b6ea8 }
+sphere egg { radius: 2.3cm, scale: [1, 1.25, 1], on: eggcup, color: #f1e3cf }
+camera { look_at: [0.08, 0.95, 0.05], azimuth: 20, elevation: 30, distance: 0.95, fov: 42 }

@@ -217,7 +217,7 @@ pub fn lower(ev: &mut Ev, had_errors: bool, line_of: &dyn Fn(Span) -> usize) -> 
                 target = framed.center();
             }
             Value::Vec3(p) if p.is_finite() => target = *p,
-            _ => ev.diags.push(Diag::error("E204", *vspan, format!("'look_at' must be an object or a point [x, y, z], not a {}", v.type_name())).hint("for example  look_at: table")),
+            _ => ev.diags.push(Diag::error("E204", *vspan, format!("'look_at' must be an object or a point [x, y, z], not {}", v.type_name())).hint("for example  look_at: table")),
         }
     }
     let aspect = r.width as f32 / r.height as f32;
@@ -250,7 +250,7 @@ pub fn lower(ev: &mut Ev, had_errors: bool, line_of: &dyn Fn(Span) -> usize) -> 
         Some((Value::Object(i), _)) => (ev.world_bounds(*i).center() - pos).length().max(1e-3),
         Some((Value::Vec3(p), _)) => (*p - pos).length().max(1e-3),
         Some((v, fspan)) => {
-            ev.diags.push(Diag::error("E204", *fspan, format!("'focus' must be an object, a point or a distance in metres, not a {}", v.type_name())).hint("for example  focus: vase"));
+            ev.diags.push(Diag::error("E204", *fspan, format!("'focus' must be an object, a point or a distance in metres, not {}", v.type_name())).hint("for example  focus: vase"));
             to_target
         }
     };
@@ -282,7 +282,8 @@ fn semantic_checks(ev: &mut Ev, scene: &Scene, infos: &[ObjectInfo]) {
 
     if top.len() <= 400 {
         for &i in &top {
-            if is_plane(ev, i) || ev.nodes[i].is_light {
+            // something put in a bowl or on a plate rests on a surface the bounding boxes cannot show
+            if is_plane(ev, i) || ev.nodes[i].is_light || ev.nodes[i].inside.is_some() {
                 continue;
             }
             let b = bounds[&i];
@@ -326,6 +327,11 @@ fn semantic_checks(ev: &mut Ev, scene: &Scene, infos: &[ObjectInfo]) {
         for (a, &i) in top.iter().enumerate() {
             for &j in &top[a + 1..] {
                 if is_plane(ev, i) || is_plane(ev, j) || ev.nodes[i].is_light || ev.nodes[j].is_light {
+                    continue;
+                }
+                // contents and their container are meant to share space; so are two things in one container
+                let (ci, cj) = (ev.nodes[i].inside, ev.nodes[j].inside);
+                if ci == Some(j) || cj == Some(i) || (ci.is_some() && ci == cj) {
                     continue;
                 }
                 let (bi, bj) = (bounds[&i], bounds[&j]);

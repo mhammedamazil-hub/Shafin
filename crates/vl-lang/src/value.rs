@@ -36,16 +36,17 @@ pub enum Value {
 }
 
 impl Value {
+    /// What kind of value this is, with its article, ready to be put in a sentence.
     pub fn type_name(&self) -> &'static str {
         match self {
-            Value::Num(_) => "number",
+            Value::Num(_) => "a number",
             Value::Bool(_) => "true/false",
-            Value::Str(_) => "string",
-            Value::Vec3(_) => "vector",
-            Value::List(_) => "list",
-            Value::Tex(_) => "texture expression",
-            Value::Object(_) => "object",
-            Value::Material(_) => "material",
+            Value::Str(_) => "a word",
+            Value::Vec3(_) => "a vector",
+            Value::List(_) => "a list",
+            Value::Tex(_) => "a texture expression",
+            Value::Object(_) => "an object",
+            Value::Material(_) => "a material",
         }
     }
     pub fn vec(v: Vec3) -> Value {

@@ -181,6 +181,10 @@ pub enum Shape {
     /// Capped truncated cone around the Y axis: radius `r0` at y = -half_h and `r1` at y = +half_h
     /// (a cylinder when r0 == r1, a cone when r1 == 0).
     Cone { r0: f32, r1: f32, half_h: f32 },
+    /// Hollow vessel around the Y axis: the truncated cone `r0`, `r1`, `half_h` with a cavity
+    /// that leaves a wall `wall` thick (measured horizontally) and a bottom `floor` thick.
+    /// Open at the top. `floor` = 0 leaves it open at both ends: a tube, a ring, a lampshade.
+    Cup { r0: f32, r1: f32, half_h: f32, wall: f32, floor: f32 },
     /// Torus around the Y axis: ring radius `major`, tube radius `minor`.
     Torus { major: f32, minor: f32 },
     /// Capsule along Y: cylinder of radius `r` and half-length `half_h` with hemispherical ends.
@@ -209,6 +213,13 @@ impl Shape {
             }
             Shape::Torus { .. } => "torus",
             Shape::Capsule { .. } => "capsule",
+            Shape::Cup { floor, .. } => {
+                if *floor > 0.0 {
+                    "cup"
+                } else {
+                    "tube"
+                }
+            }
             Shape::Disk { .. } => "disk",
             Shape::Rect { .. } => "rect",
             Shape::Plane => "plane",
@@ -222,7 +233,7 @@ impl Shape {
         match self {
             Shape::Sphere { r } => Aabb::new(Vec3::splat(-*r), Vec3::splat(*r)),
             Shape::Box { half, .. } => Aabb::new(-*half, *half),
-            Shape::Cone { r0, r1, half_h } => {
+            Shape::Cone { r0, r1, half_h } | Shape::Cup { r0, r1, half_h, .. } => {
                 let r = r0.max(*r1);
                 Aabb::new(vec3(-r, -*half_h, -r), vec3(r, *half_h, r))
             }
@@ -465,6 +476,9 @@ impl Scene {
                 Shape::Sphere { r } => *r > 0.0 && r.is_finite(),
                 Shape::Box { half, round } => half.min_comp() > 0.0 && half.is_finite() && *round >= 0.0 && *round <= half.min_comp(),
                 Shape::Cone { r0, r1, half_h } => *r0 >= 0.0 && *r1 >= 0.0 && r0.max(*r1) > 0.0 && *half_h > 0.0 && (r0 + r1 + half_h).is_finite(),
+                Shape::Cup { r0, r1, half_h, wall, floor } => {
+                    *r0 >= 0.0 && *r1 >= 0.0 && *half_h > 0.0 && *wall > 0.0 && *wall < r0.max(*r1) && *floor >= 0.0 && *floor < 2.0 * half_h && (r0 + r1 + half_h + wall + floor).is_finite()
+                }
                 Shape::Torus { major, minor } => *minor > 0.0 && *major > 0.0 && (major + minor).is_finite(),
                 Shape::Capsule { r, half_h } => *r > 0.0 && *half_h >= 0.0 && (r + half_h).is_finite(),
                 Shape::Disk { r } => *r > 0.0 && r.is_finite(),

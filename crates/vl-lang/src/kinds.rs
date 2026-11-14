@@ -13,7 +13,7 @@ use vl_ir::scene::{Shape, Tonemap};
 
 const COMMON_OBJECT_PROPS: &[&str] = &["material", "color", "visible", "shadow"];
 const MAX_DEFINE_DEPTH: u32 = 24;
-const RELATIONS: [&str; 7] = ["on", "above", "below", "left_of", "right_of", "in_front_of", "behind"];
+const RELATIONS: [&str; 8] = ["on", "in", "above", "below", "left_of", "right_of", "in_front_of", "behind"];
 
 pub const MATERIAL_PROPS: &[&str] = &[
     "preset", "color", "roughness", "metallic", "specular", "ior", "transmission", "coat", "coat_roughness", "emission", "emission_strength", "sheen", "bump", "bump_strength", "absorb_color", "absorb_distance", "thin",
@@ -52,6 +52,8 @@ pub fn shape_props(kind: &str) -> &'static [&'static str] {
         "cone" => &["radius", "top_radius", "height"],
         "torus" => &["radius", "tube"],
         "capsule" => &["radius", "height"],
+        "cup" => &["radius", "diameter", "top_radius", "height", "wall", "floor"],
+        "tube" => &["radius", "diameter", "top_radius", "height", "wall"],
         "disk" => &["radius"],
         "rect" => &["size", "width", "depth"],
         _ => &[],
@@ -66,7 +68,11 @@ impl Ev {
     ///
     /// Without any placement property an object stands on the floor of its frame (y = 0)
     /// at the origin - never half-buried - unless `default_pos` says otherwise.
-    fn place(&mut self, props: &mut Props, b: Aabb, default_pos: Option<Vec3>) -> (Mat4, Aabb) {
+    ///
+    /// `foot`: the outline of the thing seen from above (a ball nestles into a bowl properly).
+    /// After the call `self.placed_inside` names the vessel it was put in, if any.
+    fn place(&mut self, props: &mut Props, b: Aabb, default_pos: Option<Vec3>, foot: Foot) -> (Mat4, Aabb) {
+        self.placed_inside = None;
         let scale = match props.take(&["scale"]) {
             None => Vec3::ONE,
             Some((v, span)) => match self.as_vec3(&v, span, "scale", true) {
@@ -78,16 +84,31 @@ impl Ev {
                 None => Vec3::ONE,
             },
         };
+        let mut upright = true;
         let rot = match props.take(&["rotate"]) {
             None => Mat4::IDENTITY,
             Some((Value::Num(deg), _)) if deg.is_finite() => Mat4::rotate_y(deg as f32),
             Some((v, span)) => match self.as_vec3(&v, span, "rotate", false) {
-                Some(r) => Mat4::rotate_xyz(r),
+                Some(r) => {
+                    upright = r.x == 0.0 && r.z == 0.0;
+                    Mat4::rotate_xyz(r)
+                }
                 None => Mat4::IDENTITY,
             },
         };
         let rs = rot.mul(&Mat4::scale(scale));
         let b0 = b.transformed(&rs);
+        // room needed inside a vessel: (half-width, is it a ball)
+        let ball = foot == Foot::Ball && scale.x == scale.y && scale.y == scale.z;
+        let half_w = if ball || (foot != Foot::Other && upright && scale.x == scale.z) {
+            0.5 * b0.size().x.max(b0.size().z)
+        } else if upright {
+            // a box turned about the vertical keeps the diagonal it had before turning
+            let (w, d) = (b.size().x * scale.x, b.size().z * scale.z);
+            0.5 * (w * w + d * d).sqrt()
+        } else {
+            0.5 * (b0.size().x * b0.size().x + b0.size().z * b0.size().z).sqrt()
+        };
         let gap = self.num(props, &["gap"], 0.0, -1000.0, 1000.0) as f32;
 
         let used: Vec<&str> = RELATIONS.iter().copied().filter(|k| props.has(&[k])).collect();
@@ -106,8 +127,52 @@ impl Ev {
                 let (tc, oc) = (t.center(), b0.center());
                 // start aligned: centred on the target horizontally, standing on the target's base level
                 let mut p = vec3(tc.x - oc.x, t.min.y - b0.min.y, tc.z - oc.z);
+                // sideways offset, needed now to know whether the thing fits inside a vessel
+                let off = match &at {
+                    Some((Value::List(l), _)) if l.len() == 2 => match (&l[0], &l[1]) {
+                        (Value::Num(dx), Value::Num(dz)) => (*dx as f32, *dz as f32),
+                        _ => (0.0, 0.0),
+                    },
+                    Some((Value::Vec3(v), _)) => (v.x, v.z),
+                    _ => (0.0, 0.0),
+                };
+                // "in a bowl", and equally "on a plate": the thing rests on the vessel's inner floor,
+                // against its sloping wall, or on what was put there before it
+                let mut rested = false;
+                if rel == "in" || rel == "on" {
+                    if let Value::Object(ti) = &target {
+                        let ti = *ti;
+                        if let Some(v) = self.vessel(ti) {
+                            let key = (ti, self.current_frame_node());
+                            let others = self.contents.get(&key).cloned().unwrap_or_default();
+                            // with  at: [dx, dz]  the author chose the spot; otherwise it goes where it rests lowest
+                            let spot = if at.is_some() { v.settle(&others, half_w, ball, v.centre.x + off.0, v.centre.z + off.1).map(|y| (0.0, 0.0, y)) } else { v.lowest_spot(&others, half_w, ball).map(|(x, z, y)| (x - v.centre.x, z - v.centre.z, y)) };
+                            if let Some((dx, dz, y)) = spot {
+                                p = vec3(v.centre.x + dx - oc.x, y + gap - b0.min.y, v.centre.z + dz - oc.z);
+                                let hh = 0.5 * b0.size().y;
+                                self.contents.entry(key).or_default().push(Content { c: vec3(v.centre.x + dx + off.0, y + gap + hh, v.centre.z + dz + off.1), r: half_w, half_h: hh, ball });
+                                self.placed_inside = Some(ti);
+                                rested = true;
+                            } else if let (true, None, Some(y)) = (ball, &at, v.rim_rest(half_w)) {
+                                // a ball too big to go in sits in the opening, like an egg in an egg cup
+                                p = vec3(v.centre.x - oc.x, y + gap - b0.min.y, v.centre.z - oc.z);
+                                self.placed_inside = Some(ti);
+                                rested = true;
+                            } else if rel == "in" && v.has_floor {
+                                let name = self.nodes[ti].path.clone();
+                                self.warn("W349", tspan, format!("this needs {:.3} m and the opening of '{name}' is {:.3} m wide, so it was put on top instead of inside", 2.0 * (half_w + (off.0 * off.0 + off.1 * off.1).sqrt()), 2.0 * v.r_top()), "make it smaller, move it towards the middle, or make the opening wider");
+                            }
+                        } else if rel == "in" {
+                            // not a vessel ("in the room", "in the shelf"): stand on its base level
+                            p.y = t.min.y + gap - b0.min.y;
+                            self.placed_inside = Some(ti);
+                            rested = true;
+                        }
+                    }
+                }
                 match rel {
-                    "on" | "above" => p.y = t.max.y + gap - b0.min.y,
+                    "on" | "in" if rested => {}
+                    "on" | "in" | "above" => p.y = t.max.y + gap - b0.min.y,
                     "below" => p.y = t.min.y - gap - b0.max.y,
                     "right_of" => p.x = t.max.x + gap - b0.min.x,
                     "left_of" => p.x = t.min.x - gap - b0.max.x,
@@ -230,6 +295,14 @@ impl Ev {
     }
 
     fn as_material(&mut self, v: &Value, span: Span) -> Option<usize> {
+        // `sphere snow { material: snow }`: an object named after a material
+        if let Value::Object(i) = v {
+            for w in self.object_words(*i) {
+                if let Some(m) = self.named_material(&w) {
+                    return Some(m);
+                }
+            }
+        }
         match v {
             Value::Material(i) => Some(*i),
             Value::Str(s) => match self.named_material(s) {
@@ -253,7 +326,7 @@ impl Ev {
                 None
             }
             _ => {
-                self.error("E204", span, format!("'material' must be a material, not a {}", v.type_name()), format!("use a preset ({} ...) or a material defined with  material name {{ ... }}", presets::preset_names().take(8).collect::<Vec<_>>().join(", ")));
+                self.error("E204", span, format!("'material' must be a material, not {}", v.type_name()), format!("use a preset ({} ...) or a material defined with  material name {{ ... }}", presets::preset_names().take(8).collect::<Vec<_>>().join(", ")));
                 None
             }
         }
@@ -297,7 +370,7 @@ impl Ev {
             match &v {
                 Value::Tex(n) => m.bump = Some(n.clone()),
                 Value::Num(_) => m.bump = None,
-                _ => self.error("E204", span, format!("'bump' must be a texture expression giving a height in metres, not a {}", v.type_name()), "for example  bump: fbm(P * 40) * 0.002"),
+                _ => self.error("E204", span, format!("'bump' must be a texture expression giving a height in metres, not {}", v.type_name()), "for example  bump: fbm(P * 40) * 0.002"),
             }
         }
     }
@@ -335,7 +408,7 @@ impl Ev {
             },
             Some((Value::Material(i), _)) => self.mats[i].clone(),
             Some((v, pspan)) => {
-                self.error("E204", pspan, format!("'preset' must be the name of a preset, not a {}", v.type_name()), format!("presets: {}", presets::preset_names().collect::<Vec<_>>().join(", ")));
+                self.error("E204", pspan, format!("'preset' must be the name of a preset, not {}", v.type_name()), format!("presets: {}", presets::preset_names().collect::<Vec<_>>().join(", ")));
                 MatSpec::default()
             }
         };
@@ -496,6 +569,19 @@ impl Ev {
                 let minor = self.num(props, &["tube", "thickness"], 0.15, 1e-5, big) as f32;
                 Shape::Torus { major, minor }
             }
+            "cup" | "tube" => {
+                let r0 = match self.opt_num(props, &["diameter"], 1e-5, big) {
+                    Some(d) => d * 0.5,
+                    None => self.num(props, &["radius"], 0.04, 1e-5, big),
+                } as f32;
+                let r1 = self.num(props, &["top_radius"], r0 as f64, 1e-5, big) as f32;
+                let h = self.num(props, &["height"], 0.1, 1e-5, big) as f32;
+                let widest = r0.max(r1);
+                // default wall: thin enough to read as a vessel, thick enough to resolve
+                let wall = (self.num(props, &["wall", "thickness"], (widest * 0.08).max(0.0015) as f64, 1e-5, big) as f32).min(widest * 0.95);
+                let floor = if kind == "tube" { 0.0 } else { (self.num(props, &["floor", "bottom"], (wall * 1.5) as f64, 1e-5, big) as f32).min(h * 0.9) };
+                Shape::Cup { r0, r1, half_h: h * 0.5, wall, floor }
+            }
             "capsule" => {
                 let r = self.num(props, &["radius"], 0.25, 1e-5, big) as f32;
                 let h = self.num(props, &["height"], 1.0, 1e-5, big) as f32;
@@ -538,16 +624,22 @@ impl Ev {
         let hidden = !self.boolean(&mut props, &["visible"], true);
         let cast_shadow = self.boolean(&mut props, &["shadow"], true);
         let b = shape.local_bounds(&[]);
-        let (local, bounds) = self.place(&mut props, b, None);
+        let foot = match shape {
+            Shape::Sphere { .. } => Foot::Ball,
+            Shape::Cone { .. } | Shape::Cup { .. } | Shape::Torus { .. } | Shape::Capsule { .. } | Shape::Disk { .. } => Foot::Round,
+            _ => Foot::Other,
+        };
+        let (local, bounds) = self.place(&mut props, b, None, foot);
+        let inside = self.placed_inside;
         let known: Vec<&str> = shape_props(kind).iter().chain(COMMON_OBJECT_PROPS).chain(PLACEMENT_PROPS).copied().collect();
         self.finish(kind, props, &known);
         let is_light = matches!(self.mats[material].emission, PV::Tex(_)) || self.mats[material].emission_strength > 0.0;
-        self.add_node(SNode { name: local_name, path, kind: SKind::Shape { shape, material }, kind_name: kind.to_string(), local, parent: None, children: Vec::new(), bounds, span, hidden, cast_shadow, is_light }, name);
+        self.add_node(SNode { name: local_name, path, kind: SKind::Shape { shape, material }, kind_name: kind.to_string(), local, parent: None, children: Vec::new(), bounds, span, hidden, cast_shadow, is_light, inside }, name);
     }
 
     fn open_group(&mut self, kind: &str, name: Option<&(String, Span)>, span: Span) -> usize {
         let (local_name, path) = self.unique_name(kind, name);
-        let i = self.add_node(SNode { name: local_name, path: path.clone(), kind: SKind::Group, kind_name: kind.to_string(), local: Mat4::IDENTITY, parent: None, children: Vec::new(), bounds: Aabb::EMPTY, span, hidden: false, cast_shadow: true, is_light: false }, name);
+        let i = self.add_node(SNode { name: local_name, path: path.clone(), kind: SKind::Group, kind_name: kind.to_string(), local: Mat4::IDENTITY, parent: None, children: Vec::new(), bounds: Aabb::EMPTY, span, hidden: false, cast_shadow: true, is_light: false, inside: None }, name);
         self.frames.push(Frame { names: HashMap::new(), node: Some(i), prefix: path });
         i
     }
@@ -566,11 +658,12 @@ impl Ev {
             b = Aabb::new(Vec3::ZERO, Vec3::ZERO);
         }
         // a group keeps its own origin by default (its children were placed relative to it)
-        let (local, bounds) = self.place(&mut props, b, Some(Vec3::ZERO));
+        let (local, bounds) = self.place(&mut props, b, Some(Vec3::ZERO), Foot::Other);
         let known: Vec<&str> = extra_known.iter().chain(PLACEMENT_PROPS).copied().collect();
         self.finish(kind, props, &known);
         self.nodes[i].local = local;
         self.nodes[i].bounds = bounds;
+        self.nodes[i].inside = self.placed_inside;
     }
 
     fn group_block(&mut self, name: Option<&(String, Span)>, body: &[Item], span: Span) {
@@ -647,7 +740,7 @@ impl Ev {
                 }
             }
             Some((v, sspan)) => {
-                self.error("E204", sspan, format!("'shape' must be sphere, rect or disk, not a {}", v.type_name()), "write  shape: rect");
+                self.error("E204", sspan, format!("'shape' must be sphere, rect or disk, not {}", v.type_name()), "write  shape: rect");
                 "sphere".to_string()
             }
         };
@@ -698,7 +791,7 @@ impl Ev {
         let aim = props.take(&["aim", "look_at"]);
         let b = shape.local_bounds(&[]);
         let had_position = props.has(&["at"]) || RELATIONS.iter().any(|r| props.has(&[r]));
-        let (mut local, mut bounds) = self.place(&mut props, b, Some(vec3(0.0, 2.5, 0.0)));
+        let (mut local, mut bounds) = self.place(&mut props, b, Some(vec3(0.0, 2.5, 0.0)), Foot::Other);
         if !had_position {
             self.warn("W310", span, format!("light '{path}' has no position; it was placed at [0, 2.5, 0]"), "add  at: [x, y, z]");
         }
@@ -714,7 +807,7 @@ impl Ev {
             }
         }
         self.finish("light", props, LIGHT_PROPS);
-        self.add_node(SNode { name: local_name, path, kind: SKind::Shape { shape, material }, kind_name: "light".into(), local, parent: None, children: Vec::new(), bounds, span, hidden, cast_shadow: false, is_light: true }, name);
+        self.add_node(SNode { name: local_name, path, kind: SKind::Shape { shape, material }, kind_name: "light".into(), local, parent: None, children: Vec::new(), bounds, span, hidden, cast_shadow: false, is_light: true, inside: None }, name);
     }
 
     fn render_block(&mut self, body: &[Item]) {

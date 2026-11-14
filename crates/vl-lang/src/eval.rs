@@ -14,6 +14,7 @@ use crate::value::*;
 use std::collections::HashMap;
 use std::rc::Rc;
 use vl_core::color;
+use vl_core::dmath;
 use vl_core::diag::{suggest, suggest_unique, Diag, Span};
 use vl_core::math::{vec3, Aabb, Mat4, Vec3};
 use vl_ir::expr::{yields_scalar, Op};
@@ -26,19 +27,21 @@ pub const OBJECT_KINDS: &[(&str, &str)] = &[
     ("cone", "radius, top_radius, height"),
     ("torus", "radius (ring), tube (thickness radius); lies flat"),
     ("capsule", "radius, height (total; stands upright)"),
+    ("cup", "radius, top_radius, height, wall, floor: a hollow vessel, open at the top"),
+    ("tube", "radius, top_radius, height, wall: hollow and open at both ends"),
     ("plane", "an infinite horizontal floor"),
     ("disk", "radius; a flat horizontal circle"),
     ("rect", "size: [width, depth]; a flat horizontal rectangle"),
 ];
 pub const OTHER_KINDS: &[&str] = &["render", "camera", "sky", "environment", "material", "light", "group"];
-pub const PLACEMENT_PROPS: &[&str] = &["at", "on", "rotate", "scale", "left_of", "right_of", "in_front_of", "behind", "above", "below", "gap"];
+pub const PLACEMENT_PROPS: &[&str] = &["at", "on", "in", "rotate", "scale", "left_of", "right_of", "in_front_of", "behind", "above", "below", "gap"];
 
 /// Words that select an option of some property (`exposure: auto`, `tonemap: filmic`, ...).
 /// Properties whose value is a word from a fixed vocabulary (material and colour names).
 pub const WORD_PROPS: &[&str] = &["material", "color", "emission", "absorb_color", "time", "time_of_day", "weather", "shape", "tonemap", "exposure"];
 
 /// The documented name of a property, given a spelling a writer may reach for instead.
-/// These are pure synonyms; nothing is reported when one is used.
+/// These are pure synonyms; nothing is reported when one is used (one exception is marked).
 pub fn canonical_key<'a>(kind: &str, key: &'a str) -> &'a str {
     match (kind, key) {
         (_, "colour") => "color",
@@ -51,6 +54,11 @@ pub fn canonical_key<'a>(kind: &str, key: &'a str) -> &'a str {
         ("render" | "camera" | "sky" | "environment" | "material", _) => key,
         (_, "position" | "pos" | "location" | "centre" | "center") => "at",
         (_, "rotation") => "rotate",
+        (_, "inside" | "into" | "within") => "in",
+        (_, "on_top_of" | "atop") => "on",
+        (_, "next_to" | "beside" | "near" | "alongside") => "right_of", // reported as W350: the side is a guess
+        (_, "under" | "beneath" | "underneath") => "below",
+        (_, "in_front") => "in_front_of",
         _ => key,
     }
 }
@@ -88,6 +96,129 @@ pub struct SNode {
     pub hidden: bool,
     pub cast_shadow: bool,
     pub is_light: bool,
+    /// The vessel this object was put in (`in: bowl`, or `on:` a plate), if any.
+    pub inside: Option<usize>,
+}
+
+/// An upright hollow vessel, measured in the frame where objects are being placed.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Vessel {
+    /// Centre of the inner floor (of the lower opening, for a tube).
+    pub(crate) centre: Vec3,
+    /// Height of the rim.
+    pub(crate) top_y: f32,
+    /// Inner radius at the floor, and how fast it grows with height.
+    pub(crate) r_floor: f32,
+    pub(crate) k: f32,
+    /// False for a tube: nothing can rest inside it, only on its rim.
+    pub(crate) has_floor: bool,
+}
+
+/// How much room something needs when it is put in a vessel.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum Foot {
+    Ball,
+    /// Round when seen from above (cylinder, cone, cup, ...).
+    Round,
+    Other,
+}
+
+/// Something already resting in a vessel: a ball, or else its upright bounding cylinder.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Content {
+    pub(crate) c: Vec3,
+    pub(crate) r: f32,
+    pub(crate) half_h: f32,
+    pub(crate) ball: bool,
+}
+
+impl Vessel {
+    pub(crate) fn r_top(&self) -> f32 {
+        self.r_floor + self.k * (self.top_y - self.centre.y)
+    }
+
+    /// Height of the underside of something of half-width `w` (a ball of that radius when
+    /// `ball`) whose middle is `rho` from the axis and which rests on the floor or against
+    /// the wall. `None` if it does not go through the opening there.
+    pub(crate) fn rest_height(&self, w: f32, rho: f32, ball: bool) -> Option<f32> {
+        if !self.has_floor || rho + w > self.r_top() + 1e-6 {
+            return None;
+        }
+        if self.k <= 1e-6 {
+            return Some(self.centre.y); // straight or narrowing walls: once through the opening it stands on the floor
+        }
+        Some(if ball {
+            // a ball touches a sloping wall where the inner radius at the height of its centre is rho + r * sqrt(1 + k^2)
+            let yc = self.centre.y + (rho + w * (1.0 + self.k * self.k).sqrt() - self.r_floor) / self.k;
+            (yc - w).max(self.centre.y)
+        } else {
+            // the edge of a flat underside touches the wall
+            self.centre.y + ((rho + w - self.r_floor) / self.k).max(0.0)
+        })
+    }
+
+    /// Like `rest_height`, for something dropped at (x, z) on top of what is already inside.
+    pub(crate) fn settle(&self, others: &[Content], w: f32, ball: bool, x: f32, z: f32) -> Option<f32> {
+        let rho = ((x - self.centre.x) * (x - self.centre.x) + (z - self.centre.z) * (z - self.centre.z)).sqrt();
+        let mut y = self.rest_height(w, rho, ball)?;
+        for o in others {
+            let d2 = (x - o.c.x) * (x - o.c.x) + (z - o.c.z) * (z - o.c.z);
+            let reach = w + o.r;
+            if d2 < reach * reach {
+                y = y.max(if ball && o.ball {
+                    o.c.y + (reach * reach - d2).sqrt() - w // ball on ball
+                } else {
+                    o.c.y + o.half_h // otherwise it stands on top
+                });
+            }
+        }
+        Some(y)
+    }
+
+    /// Where something new comes to rest lowest, the way a thing dropped into a bowl rolls
+    /// down beside what is already there: (x, z, height of its underside).
+    pub(crate) fn lowest_spot(&self, others: &[Content], w: f32, ball: bool) -> Option<(f32, f32, f32)> {
+        let (cx, cz) = (self.centre.x, self.centre.z);
+        let mut best = self.settle(others, w, ball, cx, cz).map(|y| (0.0f32, 0.0f32, y));
+        let reach = self.r_top() - w;
+        if others.is_empty() || reach <= 0.0 {
+            return best.map(|b| (cx, cz, b.2));
+        }
+        const RINGS: u32 = 12;
+        for i in 1..=RINGS {
+            let rho = reach * i as f32 / RINGS as f32;
+            let m = (6 * i).min(60);
+            for j in 0..m {
+                let ang = std::f32::consts::TAU * j as f32 / m as f32;
+                if let Some(y) = self.settle(others, w, ball, cx + rho * dmath::cos(ang), cz + rho * dmath::sin(ang)) {
+                    if best.map(|b| y < b.2 - 1e-5).unwrap_or(true) {
+                        best = Some((rho, ang, y));
+                    }
+                }
+            }
+        }
+        // slide along the radius to the lowest point: there it touches both the wall and its neighbour
+        let (rho0, ang, _) = best?;
+        let (mut lo, mut hi) = ((rho0 - reach / RINGS as f32).max(0.0), (rho0 + reach / RINGS as f32).min(reach));
+        let at = |rho: f32| self.settle(others, w, ball, cx + rho * dmath::cos(ang), cz + rho * dmath::sin(ang)).unwrap_or(f32::MAX);
+        for _ in 0..30 {
+            let (m1, m2) = (lo + (hi - lo) / 3.0, hi - (hi - lo) / 3.0);
+            if at(m1) <= at(m2) {
+                hi = m2;
+            } else {
+                lo = m1;
+            }
+        }
+        let rho = 0.5 * (lo + hi);
+        let (rho, y) = if at(rho) <= best?.2 { (rho, at(rho)) } else { (rho0, best?.2) };
+        Some((cx + rho * dmath::cos(ang), cz + rho * dmath::sin(ang), y))
+    }
+
+    /// Underside of a ball too big for the opening: it sits in the rim like an egg in an egg cup.
+    pub(crate) fn rim_rest(&self, r: f32) -> Option<f32> {
+        let rt = self.r_top();
+        (r > rt).then(|| self.top_y + (r * r - rt * rt).max(0.0).sqrt() - r)
+    }
 }
 
 pub(crate) struct Frame {
@@ -197,6 +328,10 @@ pub struct Ev {
     steps: u64,
     pub(crate) define_depth: u32,
     pub(crate) quiet_renames: u32,
+    /// Set by `place`: the vessel the thing just placed was put in.
+    pub(crate) placed_inside: Option<usize>,
+    /// What already rests in each vessel, per frame in which things were put there.
+    pub(crate) contents: HashMap<(usize, Option<usize>), Vec<Content>>,
     pub(crate) counters: HashMap<String, u32>,
     aborted: bool,
 }
@@ -249,6 +384,8 @@ impl Ev {
             steps: 0,
             define_depth: 0,
             quiet_renames: 0,
+            placed_inside: None,
+            contents: HashMap::new(),
             counters: HashMap::new(),
             aborted: false,
         }
@@ -372,7 +509,7 @@ impl Ev {
                     (UnOp::Not, _) if truthy(&v).is_some() => Some(Value::Bool(!truthy(&v).unwrap())),
                     _ => {
                         let what = if *op == UnOp::Neg { "negate" } else { "apply 'not' to" };
-                        self.error("E204", e.span, format!("cannot {what} a {}", v.type_name()), "this operator needs a number, a vector or a texture expression");
+                        self.error("E204", e.span, format!("cannot {what} {}", v.type_name()), "this operator needs a number, a vector or a texture expression");
                         None
                     }
                 }
@@ -386,7 +523,7 @@ impl Ev {
                 let (b, i) = (self.eval(base), self.eval(idx));
                 let (b, i) = (b?, i?);
                 let Value::Num(n) = i else {
-                    self.error("E204", idx.span, format!("an index must be a number, not a {}", i.type_name()), "use 0, 1 or 2");
+                    self.error("E204", idx.span, format!("an index must be a number, not {}", i.type_name()), "use 0, 1 or 2");
                     return None;
                 };
                 let k = n as i64;
@@ -399,7 +536,7 @@ impl Ev {
                         None
                     }
                     _ => {
-                        self.error("E204", base.span, format!("a {} cannot be indexed", b.type_name()), "only lists and vectors have elements");
+                        self.error("E204", base.span, format!("{} cannot be indexed", b.type_name()), "only lists and vectors have elements");
                         None
                     }
                 }
@@ -460,7 +597,7 @@ impl Ev {
                 }
             });
         }
-        self.error("E209", span, format!("a {} has no field '{field}'", b.type_name()), "vectors have .x .y .z; objects have .top .bottom .center .size and more");
+        self.error("E209", span, format!("{} has no field '{field}'", b.type_name()), "vectors have .x .y .z; objects have .top .bottom .center .size and more");
         None
     }
 
@@ -548,7 +685,7 @@ impl Ev {
         } else {
             "both sides must be numbers, vectors or texture expressions"
         };
-        self.error("E204", span, format!("cannot apply '{sym}' to a {} and a {}", l.type_name(), r.type_name()), hint);
+        self.error("E204", span, format!("cannot apply '{sym}' to {} and {}", l.type_name(), r.type_name()), hint);
         None
     }
 
@@ -636,7 +773,7 @@ impl Ev {
                 Some(n) => nodes.push(n),
                 None => {
                     let hint = if matches!(v, Value::Str(_)) { "colours can be written as #rrggbb or with rgb(r, g, b)".to_string() } else { format!("'{pname}' must be a number, a vector or a texture expression") };
-                    self.error("E204", span, format!("{name}(): argument '{pname}' is a {}", v.type_name()), hint);
+                    self.error("E204", span, format!("{name}(): argument '{pname}' is {}", v.type_name()), hint);
                     return None;
                 }
             }
@@ -744,7 +881,7 @@ impl Ev {
                         self.items(if t { then } else { otherwise });
                         self.scopes.pop();
                     }
-                    None => self.error("E204", cond.span, format!("an 'if' condition must be true/false or a number, not a {}", c.type_name()), "compare two numbers, for example  if i % 2 == 0 { ... }"),
+                    None => self.error("E204", cond.span, format!("an 'if' condition must be true/false or a number, not {}", c.type_name()), "compare two numbers, for example  if i % 2 == 0 { ... }"),
                 }
             }
             Stmt::Define { name, span, params, body } => {
@@ -771,6 +908,9 @@ impl Ev {
         for it in body {
             match it {
                 Item::Prop { key, key_span, value } => {
+                    if matches!(key.as_str(), "next_to" | "beside" | "near" | "alongside") && !matches!(kind, "render" | "camera" | "sky" | "environment" | "material") {
+                        self.warn("W350", *key_span, format!("'{key}' does not say on which side; it was put on the right"), "choose one of  left_of  right_of  in_front_of  behind");
+                    }
                     let mut key = canonical_key(kind, key).to_string();
                     // a misspelt property that can only mean one thing is read as that thing
                     let known = crate::kinds::known_props(kind);
@@ -792,7 +932,9 @@ impl Ev {
                     // when nothing has that name: the property knows the vocabulary and can
                     // say "there is no material 'snow'" instead of "unknown name".
                     let v = match &value.kind {
-                        ExprKind::Ident(word) if WORD_PROPS.contains(&key.as_str()) && self.try_lookup(word).is_none() => Some(Value::Str(word.clone())),
+                        // The same when the word is the name of an object: `sphere orange { color: orange }`
+                        // in a loop, `box brick { material: brick }`. An object is never a colour or a material.
+                        ExprKind::Ident(word) if WORD_PROPS.contains(&key.as_str()) && matches!(self.try_lookup(word), None | Some(Value::Object(_))) => Some(Value::Str(word.clone())),
                         _ => self.eval(value),
                     };
                     match v {
@@ -846,7 +988,7 @@ impl Ev {
                 }
             }
             Some((v, span)) => {
-                self.error("E204", span, format!("'{}' must be a number, not a {}", keys[0], v.type_name()), "write a plain number, for example 0.5");
+                self.error("E204", span, format!("'{}' must be a number, not {}", keys[0], v.type_name()), "write a plain number, for example 0.5");
                 default
             }
         }
@@ -871,7 +1013,7 @@ impl Ev {
             Some((v, span)) => match truthy(&v) {
                 Some(b) => b,
                 None => {
-                    self.error("E204", span, format!("'{}' must be true or false, not a {}", keys[0], v.type_name()), "write true or false");
+                    self.error("E204", span, format!("'{}' must be true or false, not {}", keys[0], v.type_name()), "write true or false");
                     default
                 }
             },
@@ -915,8 +1057,11 @@ impl Ev {
                 }
             },
             Value::Num(n) if (0.0..=1.0).contains(n) => Some(Vec3::splat(*n as f32)),
+            // `sphere orange { color: orange }`: an object can never be a colour, so when an
+            // object happens to be named after one, the colour is what was meant
+            Value::Object(i) if self.object_words(*i).iter().any(|w| color::named(w).is_some()) => self.object_words(*i).iter().find_map(|w| color::named(w)),
             _ => {
-                self.error("E204", span, format!("'{what}' must be a colour, not a {}", v.type_name()), "write a colour as #rrggbb, rgb(r, g, b), or a colour name");
+                self.error("E204", span, format!("'{what}' must be a colour, not {}", v.type_name()), "write a colour as #rrggbb, rgb(r, g, b), or a colour name");
                 None
             }
         }
@@ -941,7 +1086,7 @@ impl Ev {
             }
             _ if colour => self.as_color(&v, span, keys[0]).map(PV::Const),
             _ => {
-                self.error("E204", span, format!("'{}' must be a number or a texture expression, not a {}", keys[0], v.type_name()), "for example 0.4, or  mix(0.2, 0.8, noise(P * 10))");
+                self.error("E204", span, format!("'{}' must be a number or a texture expression, not {}", keys[0], v.type_name()), "for example 0.4, or  mix(0.2, 0.8, noise(P * 10))");
                 None
             }
         }
@@ -960,7 +1105,7 @@ impl Ev {
                 None
             }
             _ => {
-                self.error("E204", span, format!("'{what}' must be a vector [x, y, z], not a {}", v.type_name()), "y is up; distances are in metres");
+                self.error("E204", span, format!("'{what}' must be a vector [x, y, z], not {}", v.type_name()), "y is up; distances are in metres");
                 None
             }
         }
@@ -970,6 +1115,60 @@ impl Ev {
 
     pub(crate) fn current_frame_node(&self) -> Option<usize> {
         self.frames.last().unwrap().node
+    }
+
+    /// The name an object was given, and that name without the number a repeat appended
+    /// (`orange_3` -> `orange`): the words to try when an object name stands where a colour
+    /// or a material is expected.
+    pub(crate) fn object_words(&self, i: usize) -> Vec<String> {
+        let name = self.nodes[i].name.clone();
+        let mut out = vec![name.clone()];
+        if let Some(cut) = name.rfind('_') {
+            if cut > 0 && cut + 1 < name.len() && name[cut + 1..].chars().all(|c| c.is_ascii_digit()) {
+                out.push(name[..cut].to_string());
+            }
+        }
+        out
+    }
+
+    /// Transform from node `i`'s own coordinates into the frame currently being built.
+    pub(crate) fn xform_to_here(&self, i: usize) -> Option<Mat4> {
+        let here = self.current_frame_node();
+        let mut m = self.nodes[i].local;
+        let mut p = self.nodes[i].parent;
+        loop {
+            if p == here {
+                return Some(m);
+            }
+            let pi = p?;
+            m = self.nodes[pi].local.mul(&m);
+            p = self.nodes[pi].parent;
+        }
+    }
+
+    /// The widest upright vessel that is node `i` or a part of it.
+    pub(crate) fn vessel(&self, i: usize) -> Option<Vessel> {
+        let mut best: Option<Vessel> = None;
+        let mut stack = vec![i];
+        while let Some(n) = stack.pop() {
+            stack.extend(self.nodes[n].children.iter().copied());
+            let SKind::Shape { shape: Shape::Cup { r0, r1, half_h, wall, floor }, .. } = self.nodes[n].kind else { continue };
+            let Some(m) = self.xform_to_here(n) else { continue };
+            let up = m.vector(Vec3::Y);
+            // a vessel stretched sideways is no longer round: use its narrow direction, so that
+            // whatever is put inside may sit a little high but never cuts into the wall
+            let (sy, sx) = (up.length(), m.vector(Vec3::X).length().min(m.vector(Vec3::Z).length()));
+            if !(sy > 0.0) || up.y / sy < 0.999 {
+                continue; // tipped over
+            }
+            let yf = -half_h + floor;
+            let slope = (r1 - r0) / (2.0 * half_h);
+            let v = Vessel { centre: m.point(vec3(0.0, yf, 0.0)), top_y: m.point(vec3(0.0, half_h, 0.0)).y, r_floor: ((r0 - wall) + slope * (yf + half_h)).max(0.0) * sx, k: slope * sx / sy, has_floor: floor > 0.0 };
+            if best.map(|b| v.r_top() > b.r_top()).unwrap_or(true) {
+                best = Some(v);
+            }
+        }
+        best
     }
 
     /// Bounds of node `i` expressed in the frame currently being built.
@@ -1010,7 +1209,7 @@ impl Ev {
                 None
             }
             _ => {
-                self.error("E204", span, format!("'{what}' needs the name of an object (or a height in metres), not a {}", v.type_name()), "for example  on: table");
+                self.error("E204", span, format!("'{what}' needs the name of an object (or a height in metres), not {}", v.type_name()), "for example  on: table");
                 None
             }
         }

@@ -27,6 +27,8 @@ cylinder { radius: 0.5, height: 1 }                        stands upright
 cone     { radius: 0.5, top_radius: 0, height: 1 }
 torus    { radius: 0.5, tube: 0.1 }                        lies flat
 capsule  { radius: 0.25, height: 1 }
+cup      { radius: 0.04, top_radius: 0.05, height: 0.1, wall: 0.004 }    hollow, open on top: mug, glass, bowl, plate, pot
+tube     { radius: 0.2, height: 0.5, wall: 0.01 }          open at both ends: pipe, ring, lampshade
 plane    { }                                               the infinite floor; most scenes need one
 disk     { radius: 0.5 }       rect { size: [width, depth] }    flat, horizontal
 ```
@@ -37,6 +39,7 @@ Prefer relations; the tool computes exact contact, so nothing floats or sinks.
 
 ```
 on: table                 stand on top of `table`;  add  at: [dx, dz]  to shift sideways from its centre
+in: bowl                  rest inside a `cup` (an orange in a bowl, a pencil pot);  on: plate  works the same way
 right_of: table           also  left_of  in_front_of  behind  above  below ;  add  gap: 0.1
 at: [x, z]                stand on the floor at that spot
 at: [x, y, z]             centre of the object in space (only when nothing else fits)
@@ -105,7 +108,7 @@ camera, the whole scene is framed. `f_stop` blurs what is out of focus (smaller 
 plane ground { material: concrete }
 box table { size: [1.4, 0.75, 0.8], material: wood }
 sphere ball { radius: 0.1, on: table, at: [-0.3, 0], color: red, material: plastic }
-cylinder mug { radius: 0.04, height: 0.1, on: table, material: ceramic }
+cup mug { radius: 0.04, height: 0.1, on: table, material: ceramic }
 box book { size: [0.2, 0.03, 0.14], on: table, at: [0.35, 0.1], color: navy }
 for i in 1..4 {
     # a stack: each book rests on the one before it (inside a loop a name means the latest one)
