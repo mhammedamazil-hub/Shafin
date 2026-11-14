@@ -1,0 +1,134 @@
+{
+ "request": {
+  "request_id": 2,
+  "purpose": "Second measurement, on prompts no model output has been seen for and with one model family the compiler was never tried on: can small text-only LLMs write VL from the one-page reference, and does the tool's feedback let them repair their programs?",
+  "notes": [
+   "The compiler and the reference were changed after run 1 using run 1's transcripts. Run 1's prompts are therefore not reused here.",
+   "llama3.2:3b is new in this run: no output of that model was seen while the language was being changed.",
+   "The three prompts were fixed before any model saw them. None resembles the worked example in the reference."
+  ],
+  "time_budget_minutes": 34,
+  "max_rounds": 3,
+  "num_predict": 800,
+  "hosted_pause_seconds": 16,
+  "render": {
+   "width": 480,
+   "samples": 24
+  },
+  "backends": [
+   {
+    "name": "gpt-oss-20b-hosted",
+    "type": "openai",
+    "url": "https://text.pollinations.ai/openai",
+    "model": "openai",
+    "max_tokens": 12000
+   }
+  ],
+  "prompts": [
+   {
+    "id": "billiards",
+    "text": "Three billiard balls - one red, one yellow, one black - lying next to each other on a table covered with green cloth, lit by a single lamp hanging above the table. The room is dark."
+   },
+   {
+    "id": "fruit-bowl",
+    "text": "A white bowl holding four oranges, standing on a kitchen counter, with a drinking glass beside it, in morning sunlight."
+   },
+   {
+    "id": "street",
+    "text": "A street at dusk: a grey road, a row of four street lamps along one side (each a tall thin pole with a glowing ball on top) and a red car made of two boxes with four dark wheels."
+   }
+  ]
+ },
+ "reference_words": 948,
+ "runs": [
+  {
+   "backend": "gpt-oss-20b-hosted",
+   "prompt": "billiards",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 200,
+      "seconds": 33.1,
+      "attempts": 1,
+      "served_model": "gpt-oss-20b",
+      "usage": {
+       "prompt_tokens": 1843,
+       "completion_tokens": 1206,
+       "total_tokens": 3049
+      }
+     },
+     "valid": true,
+     "errors": 0,
+     "warnings": 0,
+     "codes": [],
+     "visual_findings": [],
+     "outcome": "valid, nothing reported"
+    }
+   ],
+   "status": "valid program",
+   "final_valid": true,
+   "final_open_remarks": 0,
+   "first_attempt_valid": true,
+   "rounds_used": 1,
+   "final_program": "gpt-oss-20b-hosted/billiards/round0.vl",
+   "render": {
+    "output": "/home/runner/work/_temp/out/gpt-oss-20b-hosted/billiards/final.png",
+    "width": 480,
+    "height": 270,
+    "samples": 24,
+    "seconds": 7.56,
+    "million_rays": 9.43,
+    "exposure_ev": 4.13,
+    "png_bytes": 166854,
+    "image_hash": "2b3a14b6eaa74921"
+   },
+   "final_findings": [],
+   "final_warnings": []
+  },
+  {
+   "backend": "gpt-oss-20b-hosted",
+   "prompt": "fruit-bowl",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 400,
+      "seconds": 0.4,
+      "attempts": 3,
+      "error": "{\"success\":false,\"error\":{\"message\":\"The model exhausted its output token limit before producing an answer. Increase the token limit or reduce reasoning effort.\",\"code\":\"output_token_limit_exceeded\",\"timestamp\":\"2026-11-14T15:01:00.674Z\",\"details\":{\"name\":\"UpstreamError\",\"upstreamHost\":\"portkey.myceli.ai\"}},\"status\":400}"
+     },
+     "outcome": "no reply from the model"
+    }
+   ],
+   "status": "no valid program",
+   "final_valid": false,
+   "final_open_remarks": null,
+   "first_attempt_valid": false,
+   "rounds_used": 1
+  },
+  {
+   "backend": "gpt-oss-20b-hosted",
+   "prompt": "street",
+   "rounds": [
+    {
+     "round": 0,
+     "llm": {
+      "status": 400,
+      "seconds": 0.4,
+      "attempts": 3,
+      "error": "{\"success\":false,\"error\":{\"message\":\"The model exhausted its output token limit before producing an answer. Increase the token limit or reduce reasoning effort.\",\"code\":\"output_token_limit_exceeded\",\"timestamp\":\"2026-11-14T15:04:23.288Z\",\"details\":{\"name\":\"UpstreamError\",\"upstreamHost\":\"portkey.myceli.ai\"}},\"status\":400}"
+     },
+     "outcome": "no reply from the model"
+    }
+   ],
+   "status": "no valid program",
+   "final_valid": false,
+   "final_open_remarks": null,
+   "first_attempt_valid": false,
+   "rounds_used": 1
+  }
+ ],
+ "vl_version": "vl 0.1.0",
+ "elapsed_minutes": 7.2
+}
