@@ -192,6 +192,51 @@ fn automatic_camera_frames_the_whole_subject() {
 }
 
 #[test]
+fn looking_at_a_small_thing_leaves_room_around_it() {
+    // Where do the corners of `name` fall in the picture (x and y from -1 to 1), and how
+    // tall is it as a fraction of the picture height?
+    fn in_picture(c: &vl_lang::Compiled, name: &str) -> (f32, f32) {
+        let s = c.scene.as_ref().unwrap();
+        let cam = &s.camera;
+        let f = (cam.target - cam.pos).normalize();
+        let r = f.cross(cam.up).normalize();
+        let u = r.cross(f);
+        let th = (cam.vfov.to_radians() * 0.5).tan();
+        let aspect = s.film.width as f32 / s.film.height as f32;
+        let (mn, mx) = bounds(c, name);
+        let (mut worst, mut lo, mut hi) = (0.0f32, f32::MAX, f32::MIN);
+        for i in 0..8 {
+            let p = vec3(if i & 1 == 0 { mn.x } else { mx.x }, if i & 2 == 0 { mn.y } else { mx.y }, if i & 4 == 0 { mn.z } else { mx.z });
+            let v = p - cam.pos;
+            let z = v.dot(f);
+            assert!(z > 0.0);
+            let (x, y) = (v.dot(r) / z / (th * aspect), v.dot(u) / z / th);
+            worst = worst.max(x.abs()).max(y.abs());
+            lo = lo.min(y);
+            hi = hi.max(y);
+        }
+        (worst, (hi - lo) * 0.5)
+    }
+    let scene = "plane ground { }\nbox table { size: [1.6, 0.75, 0.9] }\nsphere ball { radius: 3cm, on: table }\nsphere other { radius: 3cm, right_of: ball, gap: 2cm }\n";
+    // a small object in a larger scene: clearly the subject, with its neighbour wholly in view
+    let c = ok(&format!("{scene}camera {{ look_at: ball }}"));
+    let (edge, height) = in_picture(&c, "ball");
+    assert!(edge < 0.5, "the ball is near the middle: {edge}");
+    assert!(height > 0.15 && height < 0.6, "the ball spans {height} of the picture height");
+    let (edge, _) = in_picture(&c, "other");
+    assert!(edge < 1.0, "the neighbour is cut off: {edge}");
+    // without the rule the ball's own bounding box would fill the frame (about 0.9 of the height)
+    // the object that is nearly the whole scene is framed whole, and large
+    let c = ok(&format!("{scene}camera {{ look_at: table }}"));
+    let (edge, height) = in_picture(&c, "table");
+    assert!(edge < 1.0 && height > 0.45, "table: edge {edge}, height {height}");
+    // an explicit distance is obeyed exactly
+    let c = ok(&format!("{scene}camera {{ look_at: ball, distance: 0.5 }}"));
+    let s = c.scene.as_ref().unwrap();
+    assert!(close((s.camera.target - s.camera.pos).length(), 0.5));
+}
+
+#[test]
 fn diagnostics_for_typical_mistakes_name_the_fix() {
     let find = |d: &[(String, String, String)], code: &str| d.iter().find(|x| x.0 == code).unwrap_or_else(|| panic!("no {code} in {d:?}")).clone();
 

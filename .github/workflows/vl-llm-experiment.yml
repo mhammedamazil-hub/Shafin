@@ -2,9 +2,14 @@
 # open-weight models locally with Ollama (CPU, no accounts or keys) and runs
 # tools/ci/llm_experiment.py. Runs only when .github/vl-requests/llm-experiment.json changes.
 #
-# Cost note: this repository is private, so every run spends Actions minutes. The
-# experiment step is capped at 40 minutes and the script stops starting new work after
-# its own time budget; partial results are still published.
+# One job per backend (the request lists up to four), side by side, so that the whole
+# experiment takes about as long as its slowest model. Each job publishes what it measured
+# to its own hidden ref, refs/vl-results/llm-experiment-r<request_id>-b<index>; results of
+# earlier requests are never overwritten.
+#
+# Cost note: this repository is private, so every job spends Actions minutes. Each job is
+# capped at 50 minutes and the script stops starting new work after its own time budget;
+# partial results are still published.
 #
 # The optional "openai" backend in the request file sends the language reference and the
 # scene descriptions (nothing else) to a third-party endpoint; remove that backend from
@@ -27,17 +32,33 @@ jobs:
   experiment:
     runs-on: ubuntu-24.04
     timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [0, 1, 2, 3]
     env:
       OLLAMA_NUM_PARALLEL: "1"
       OLLAMA_KEEP_ALIVE: "20m"
+      BACKEND: ${{ matrix.backend }}
     steps:
       - uses: actions/checkout@v4
       - name: Prepare output directory
+        id: prep
         run: |
           mkdir -p "$RUNNER_TEMP/out"
           echo "OUT=$RUNNER_TEMP/out" >> "$GITHUB_ENV"
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          req = json.load(open(".github/vl-requests/llm-experiment.json"))
+          i = int(os.environ["BACKEND"])
+          b = req["backends"][i] if i < len(req["backends"]) else None
+          print(f"request_id={req['request_id']}")
+          print(f"present={'true' if b else 'false'}")
+          print(f"local={'true' if b and b['type'] == 'ollama' else 'false'}")
+          PY
       - name: Build vl
         id: build
+        if: steps.prep.outputs.present == 'true'
         run: |
           set -uo pipefail
           { rustc --version; cargo --version; nproc; } > "$OUT/toolchain.txt" 2>&1
@@ -49,6 +70,7 @@ jobs:
           exit $rc
       - name: Install Ollama
         id: install
+        if: steps.prep.outputs.local == 'true'
         run: |
           set -uo pipefail
           curl -fsSL https://ollama.com/install.sh -o "$RUNNER_TEMP/install.sh"
@@ -58,33 +80,35 @@ jobs:
           exit $rc
       - name: Start server and run the experiment
         id: experiment
-        timeout-minutes: 40
+        if: steps.prep.outputs.present == 'true'
+        timeout-minutes: 42
         run: |
           set -uo pipefail
-          up() { curl -fsS --max-time 3 http://127.0.0.1:11434/api/version > /dev/null 2>&1; }
-          ok=0
-          for i in $(seq 1 5); do if up; then ok=1; break; fi; sleep 1; done
-          if [ "$ok" != 1 ]; then
-            # the installer leaves the service disabled on hosted runners (measured, run 43582226851)
-            nohup ollama serve > "$OUT/serve.log" 2>&1 &
-            for i in $(seq 1 60); do if up; then ok=1; break; fi; sleep 1; done
+          if [ "${{ steps.prep.outputs.local }}" = "true" ]; then
+            up() { curl -fsS --max-time 3 http://127.0.0.1:11434/api/version > /dev/null 2>&1; }
+            ok=0
+            for i in $(seq 1 5); do if up; then ok=1; break; fi; sleep 1; done
+            if [ "$ok" != 1 ]; then
+              # the installer leaves the service disabled on hosted runners (measured, run 43582226851)
+              nohup ollama serve > "$OUT/serve.log" 2>&1 &
+              for i in $(seq 1 60); do if up; then ok=1; break; fi; sleep 1; done
+            fi
+            echo "ollama server up: $ok" | tee "$OUT/server.txt"
           fi
-          echo "ollama server up: $ok" | tee "$OUT/server.txt"
-          # a missing local server is not fatal: hosted backends can still run, local ones are recorded as failed
-          python3 tools/ci/llm_experiment.py .github/vl-requests/llm-experiment.json "$OUT" 2>&1 | tee "$OUT/experiment.log"
+          python3 tools/ci/llm_experiment.py .github/vl-requests/llm-experiment.json "$OUT" "$BACKEND" 2>&1 | tee "$OUT/experiment.log"
           exit "${PIPESTATUS[0]}"
-      - name: Publish to refs/vl-results/llm-experiment
-        if: always()
+      - name: Publish to a hidden ref
+        if: always() && steps.prep.outputs.present == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/out" && cd "$RUNNER_TEMP/out"
-          printf '{"run_id":"%s","source_sha":"%s","build":"%s","install":"%s","experiment":"%s"}\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "${{ steps.build.outcome }}" "${{ steps.install.outcome }}" "${{ steps.experiment.outcome }}" > status.json
+          printf '{"run_id":"%s","source_sha":"%s","backend_index":"%s","build":"%s","install":"%s","experiment":"%s"}\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "$BACKEND" "${{ steps.build.outcome }}" "${{ steps.install.outcome }}" "${{ steps.experiment.outcome }}" > status.json
           for f in install.log serve.log; do [ -f "$f" ] && tail -c 30000 "$f" > "$f.tmp" && mv "$f.tmp" "$f"; done
           git init -q .
           git config user.name "vl-bot"
           git config user.email "vl-bot@users.noreply.github.com"
           git add -A
-          git commit -q -m "llm experiment (run $GITHUB_RUN_ID)"
-          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/vl-results/llm-experiment
+          git commit -q -m "llm experiment ${{ steps.prep.outputs.request_id }}, backend $BACKEND (run $GITHUB_RUN_ID)"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/vl-results/llm-experiment-r${{ steps.prep.outputs.request_id }}-b$BACKEND"

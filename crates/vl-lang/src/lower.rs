@@ -211,10 +211,28 @@ pub fn lower(ev: &mut Ev, had_errors: bool, line_of: &dyn Fn(Span) -> usize) -> 
         match v {
             Value::Object(i) => {
                 framed = ev.world_bounds(*i);
+                let one_object = !is_plane(*i);
                 if is_plane(*i) {
                     framed = subject;
                 }
                 target = framed.center();
+                if one_object {
+                    // "look at the mug" is not "fill the picture with the mug": the picture takes in
+                    // the object and whatever lies within one object-size of it on every side, so
+                    // that what it stands on and what is next to it can be seen.
+                    let reach = framed.size().max_comp().max(0.05) * LOOK_AT_ROOM;
+                    // (downwards only a little: the surface it stands on, not the whole table leg)
+                    let region = Aabb::new(framed.min - vec3(reach, 0.1 * reach, reach), framed.max + Vec3::splat(reach));
+                    for j in 0..ev.nodes.len() {
+                        if ev.nodes[j].parent.is_none() && !is_plane(j) && !ev.nodes[j].is_light {
+                            let b = ev.world_bounds(j);
+                            let (lo, hi) = (b.min.max(region.min), b.max.min(region.max));
+                            if lo.x <= hi.x && lo.y <= hi.y && lo.z <= hi.z {
+                                framed = framed.union(&Aabb::new(lo, hi));
+                            }
+                        }
+                    }
+                }
             }
             Value::Vec3(p) if p.is_finite() => target = *p,
             _ => ev.diags.push(Diag::error("E204", *vspan, format!("'look_at' must be an object or a point [x, y, z], not {}", v.type_name())).hint("for example  look_at: table")),
@@ -227,12 +245,26 @@ pub fn lower(ev: &mut Ev, had_errors: bool, line_of: &dyn Fn(Span) -> usize) -> 
     let pos = match spec.from {
         Some(p) => p,
         None => {
-            let radius = (framed.size().length() * 0.5).max(0.05);
-            let auto = radius / dmath::sin(half_v.min(half_h)) * 1.08;
-            let d = spec.distance.map(|d| d as f32).unwrap_or(auto);
+            // direction from the target to the camera, and the camera's own axes
             let (se, ce) = dmath::sincos(dmath::radians(spec.elevation as f32));
             let (sa, ca) = dmath::sincos(dmath::radians(spec.azimuth as f32));
-            target + vec3(sa * ce, se, ca * ce) * d
+            let back = vec3(sa * ce, se, ca * ce);
+            let fwd = -back;
+            let world_up = if fwd.cross(Vec3::Y).length() < 1e-3 { Vec3::Z } else { Vec3::Y };
+            let right = fwd.cross(world_up).normalize();
+            let upv = right.cross(fwd);
+            // the nearest distance from which every corner of the framed box is inside the picture,
+            // with a tenth of the frame left free at each edge
+            let (th, tv) = (dmath::tan(half_h) * 0.9, dmath::tan(half_v) * 0.9);
+            let mut auto = 0.05f32;
+            for i in 0..8 {
+                let corner = vec3(if i & 1 == 0 { framed.min.x } else { framed.max.x }, if i & 2 == 0 { framed.min.y } else { framed.max.y }, if i & 4 == 0 { framed.min.z } else { framed.max.z });
+                let v = corner - target;
+                let along = v.dot(fwd);
+                auto = auto.max(v.dot(right).abs() / th - along).max(v.dot(upv).abs() / tv - along);
+            }
+            let d = spec.distance.map(|d| d as f32).unwrap_or(auto);
+            target + back * d
         }
     };
     let to_target = (target - pos).length();
@@ -273,6 +305,10 @@ pub fn lower(ev: &mut Ev, had_errors: bool, line_of: &dyn Fn(Span) -> usize) -> 
 
 /// Checks that need no rendering: things a person would call obviously wrong.
 /// They are warnings, because floating or intersecting objects are sometimes intended.
+/// The automatic camera, told to look at an object, also takes in what lies within this many
+/// object-sizes of it on every side.
+const LOOK_AT_ROOM: f32 = 1.0;
+
 fn semantic_checks(ev: &mut Ev, scene: &Scene, infos: &[ObjectInfo]) {
     let top: Vec<usize> = (0..ev.nodes.len()).filter(|&i| ev.nodes[i].parent.is_none()).collect();
     let is_plane = |ev: &Ev, i: usize| matches!(ev.nodes[i].kind, SKind::Shape { shape: Shape::Plane, .. });
@@ -337,7 +373,9 @@ fn semantic_checks(ev: &mut Ev, scene: &Scene, infos: &[ObjectInfo]) {
                 let (bi, bj) = (bounds[&i], bounds[&j]);
                 let ov = bi.overlap(&bj);
                 let small = bi.size().min(bj.size());
-                if ov.x > 0.25 * small.x.max(1e-4) && ov.y > 0.25 * small.y.max(1e-4) && ov.z > 0.25 * small.z.max(1e-4) {
+                // more than half of the smaller one in every direction: a wheel set into a car body
+                // or a handle on a mug is construction, two things on the same spot is a mistake
+                if ov.x > 0.5 * small.x.max(1e-4) && ov.y > 0.5 * small.y.max(1e-4) && ov.z > 0.5 * small.z.max(1e-4) {
                     out.push(
                         Diag::warning("W322", ev.nodes[j].span, format!("'{}' and '{}' occupy the same space (their bounding boxes overlap by {:.2} x {:.2} x {:.2} m)", ev.nodes[i].path, ev.nodes[j].path, ov.x, ov.y, ov.z))
                             .hint(format!("move one of them, for example  right_of: {}  or  on: {}  - ignore this if one is meant to be inside the other", ev.nodes[i].path, ev.nodes[i].path)),

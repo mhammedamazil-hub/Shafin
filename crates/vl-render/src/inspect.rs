@@ -13,7 +13,7 @@ use crate::post;
 use crate::rt::SceneRt;
 use vl_core::color;
 use vl_core::json::Json;
-use vl_core::math::Vec3;
+use vl_core::math::{Aabb, Vec3};
 use vl_ir::scene::{Scene, Shape};
 
 /// Longest side, in pixels, of the buffers used for inspection.
@@ -75,18 +75,34 @@ pub fn inspect(scene: &Scene, threads: usize) -> Inspection {
     let (w, h) = (((f.width as f32 * k).round() as usize).max(2), ((f.height as f32 * k).round() as usize).max(2));
     let over = FilmOverride { width: Some(w as u32), height: Some(h as u32), spp: Some(24), max_depth: Some(f.max_depth.min(6)) };
 
-    // 1. which object does each pixel show (pinhole, crisp)
-    let ids: Vec<u32> = {
-        let rows: Vec<Vec<u32>> = vl_core::par::par_map(h, threads.max(1), |y| {
+    // 1. which objects does each pixel show (pinhole, crisp): the first surface and, when
+    //    that is glass or water, what is seen through it. Ice in a glass is not "hidden".
+    const LAYERS: usize = 4;
+    let layers: Vec<[u32; LAYERS]> = {
+        let rows: Vec<Vec<[u32; LAYERS]>> = vl_core::par::par_map(h, threads.max(1), |y| {
             (0..w)
                 .map(|x| {
                     let (o, d) = rt.cam.pinhole_ray(x as f32 + 0.5, y as f32 + 0.5, w as f32, h as f32);
-                    rt.closest(o, d, 0.0, f32::MAX, true).map(|hit| hit.obj).unwrap_or(u32::MAX)
+                    let mut out = [u32::MAX; LAYERS];
+                    let (mut n, mut t0) = (0usize, 0.0f32);
+                    for _ in 0..24 {
+                        let Some(hit) = rt.closest(o, d, t0, f32::MAX, true) else { break };
+                        if !out[..n].contains(&hit.obj) {
+                            out[n] = hit.obj;
+                            n += 1;
+                        }
+                        if n == LAYERS || !rt.mats[rt.insts[hit.obj as usize].material as usize].transmissive {
+                            break;
+                        }
+                        t0 = hit.t * (1.0 + 1e-4) + 1e-5;
+                    }
+                    out
                 })
                 .collect()
         });
         rows.into_iter().flatten().collect()
     };
+    let ids: Vec<u32> = layers.iter().map(|l| l[0]).collect();
 
     // 2. a small beauty render for colour and exposure statistics
     let (ev, auto_exposure) = pipeline::measure_exposure(&rt, threads);
@@ -111,18 +127,16 @@ pub fn inspect(scene: &Scene, threads: usize) -> Inspection {
     let mut colour = vec![Vec3::ZERO; nobj];
     for y in 0..h {
         for x in 0..w {
-            let id = ids[y * w + x];
-            if id == u32::MAX {
-                continue;
+            for &id in layers[y * w + x].iter().take_while(|&&id| id != u32::MAX) {
+                let i = id as usize;
+                visible[i] += 1;
+                let b = &mut boxes[i];
+                b[0] = b[0].min(x);
+                b[1] = b[1].min(y);
+                b[2] = b[2].max(x);
+                b[3] = b[3].max(y);
+                colour[i] += px(y * w + x);
             }
-            let i = id as usize;
-            visible[i] += 1;
-            let b = &mut boxes[i];
-            b[0] = b[0].min(x);
-            b[1] = b[1].min(y);
-            b[2] = b[2].max(x);
-            b[3] = b[3].max(y);
-            colour[i] += px(y * w + x);
         }
     }
     let mut objects = Vec::with_capacity(nobj);
@@ -159,8 +173,10 @@ pub fn inspect(scene: &Scene, threads: usize) -> Inspection {
                     if geom::intersect(&inst.shape, &scene.meshes, &rt.mesh_rt, lo, ld, 0.0, f32::MAX).is_some() {
                         silhouette += 1;
                         edge |= x == 0 || y == 0 || x == w - 1 || y == h - 1;
-                        let seen = ids[y * w + x];
-                        if seen != i as u32 && seen != u32::MAX {
+                        // what stopped the view here, if this object is not among the things seen
+                        let l = &layers[y * w + x];
+                        let seen = l.iter().rev().copied().find(|&id| id != u32::MAX).unwrap_or(u32::MAX);
+                        if !l.contains(&(i as u32)) && seen != u32::MAX {
                             match blockers.iter_mut().find(|b| b.0 == seen) {
                                 Some(b) => b.1 += 1,
                                 None => blockers.push((seen, 1)),
@@ -191,42 +207,134 @@ pub fn inspect(scene: &Scene, threads: usize) -> Inspection {
     // 4. findings
     let mut findings = Vec::new();
     let full_res_px = |pct: f32| pct / 100.0 * (f.width as f32 * f.height as f32);
-    let mut subject_pct = 0.0f32;
+    let subject_px = ids.iter().filter(|&&id| id != u32::MAX && !matches!(scene.objects[id as usize].shape, Shape::Plane)).count();
+    let subject_pct = 100.0 * subject_px as f32 / n as f32;
+    // Findings are about whole things, not their parts: a table whose top hides two of its
+    // legs is a normal table. Parts of one group (names sharing the text before the first
+    // dot) are added up, and hiding one another does not count.
+    struct Whole {
+        name: String,
+        image_pct: f32,
+        visible: f32,
+        silhouette: f32,
+        in_frame: bool,
+        edge: bool,
+        is_light: bool,
+        hidden_by: Vec<String>,
+        bounds: Aabb,
+        /// Bounds of the hollow vessels among its parts (a bowl, a mug).
+        cups: Vec<Aabb>,
+    }
+    let mut wholes: Vec<Whole> = Vec::new();
     for (o, so) in objects.iter().zip(&scene.objects) {
         if matches!(so.shape, Shape::Plane) || so.hidden {
             continue;
         }
-        subject_pct += o.image_pct;
-        let name = Some(o.name.clone());
+        let top = top_level(&o.name).to_string();
+        let i = match wholes.iter().position(|w| w.name == top) {
+            Some(i) => i,
+            None => {
+                wholes.push(Whole { name: top.clone(), image_pct: 0.0, visible: 0.0, silhouette: 0.0, in_frame: false, edge: false, is_light: true, hidden_by: Vec::new(), bounds: Aabb::EMPTY, cups: Vec::new() });
+                wholes.len() - 1
+            }
+        };
+        let w = &mut wholes[i];
+        let wb = so.shape.local_bounds(&scene.meshes).transformed(&so.xform);
+        w.bounds = w.bounds.union(&wb);
+        if matches!(so.shape, Shape::Cup { .. }) {
+            w.cups.push(wb);
+        }
+        w.image_pct += o.image_pct;
+        w.in_frame |= o.in_frame;
+        w.edge |= o.touches_frame_edge;
+        w.is_light &= o.is_light;
+        if let Some(vf) = o.visible_fraction {
+            // image_pct is the visible share; the silhouette follows from the visible fraction
+            w.visible += o.image_pct;
+            w.silhouette += if vf > 0.0 { o.image_pct / vf } else { 0.0 };
+        }
+        for h in &o.hidden_by {
+            if top_level(h) != top && !w.hidden_by.contains(&top_level(h).to_string()) {
+                w.hidden_by.push(top_level(h).to_string());
+            }
+        }
+    }
+    // Things stacked, piled, put inside one another or built into one another hide each other
+    // by design: the orange at the bottom of a bowl of oranges, the far wheels of a car made
+    // of boxes. Only what is hidden by something that merely stands in front of it is reported.
+    let overlap = |a: &Aabb, b: &Aabb| Vec3 { x: a.max.x.min(b.max.x) - a.min.x.max(b.min.x), y: a.max.y.min(b.max.y) - a.min.y.max(b.min.y), z: a.max.z.min(b.max.z) - a.min.z.max(b.min.z) };
+    // one above the other, touching or nearly
+    let stacked = |a: &Aabb, b: &Aabb| {
+        let o = overlap(a, b);
+        o.x > 0.1 * a.size().x.min(b.size().x) && o.z > 0.1 * a.size().z.min(b.size().z) && o.y > -0.05
+    };
+    // `a` is built into `b`: a good part of it lies inside b's bounds
+    let built_into = |a: &Aabb, b: &Aabb| {
+        let (o, sa) = (overlap(a, b), a.size());
+        o.x > 0.0 && o.y > 0.0 && o.z > 0.0 && o.x * o.y * o.z >= 0.15 * (sa.x * sa.y * sa.z).max(1e-12)
+    };
+    // the vessel a thing lies in: its middle is within the vessel's outline and it reaches below the rim
+    let vessel_of = |w: &Whole| -> Option<(usize, usize)> {
+        let c = w.bounds.center();
+        for (i, o) in wholes.iter().enumerate() {
+            if o.name == w.name {
+                continue;
+            }
+            for (j, cup) in o.cups.iter().enumerate() {
+                if c.x > cup.min.x && c.x < cup.max.x && c.z > cup.min.z && c.z < cup.max.z && w.bounds.min.y < cup.max.y && w.bounds.max.y > cup.min.y {
+                    return Some((i, j));
+                }
+            }
+        }
+        None
+    };
+    let vessels: Vec<Option<(usize, usize)>> = wholes.iter().map(vessel_of).collect();
+    let together = |a: usize, b: usize| {
+        let (ba, bb) = (&wholes[a].bounds, &wholes[b].bounds);
+        stacked(ba, bb) || built_into(ba, bb) || built_into(bb, ba) || (vessels[a].is_some() && vessels[a] == vessels[b]) || vessels[a].map(|v| v.0) == Some(b) || vessels[b].map(|v| v.0) == Some(a)
+    };
+    // ... or with the thing `a` is built into: the cabin on the car body hides the far wheel
+    let belongs = |a: usize, h: usize| together(a, h) || (0..wholes.len()).any(|c| c != a && c != h && built_into(&wholes[a].bounds, &wholes[c].bounds) && together(c, h));
+    let in_front: Vec<Vec<String>> = (0..wholes.len()).map(|a| wholes[a].hidden_by.iter().filter(|h| wholes.iter().position(|o| &o.name == *h).map(|b| !belongs(a, b)).unwrap_or(true)).cloned().collect()).collect();
+    for (w, in_front) in wholes.iter().zip(&in_front) {
+        let name = Some(w.name.clone());
         // A lamp that lights the scene from outside the picture, or from behind something,
         // is how lamps are normally used. Reporting it sent a model off to "fix" a good scene.
-        if o.is_light && (!o.in_frame || o.image_pct == 0.0) {
+        if w.is_light && (!w.in_frame || w.image_pct == 0.0) {
             continue;
         }
-        if !o.in_frame {
-            findings.push(Finding { code: "V101", object: name, message: format!("'{}' is outside the picture: the camera does not see it at all", o.name), hint: format!("point the camera at it ( look_at: {} ), move it into view, or widen 'fov'", top_level(&o.name)) });
-        } else if o.image_pct == 0.0 {
-            let by = if o.hidden_by.is_empty() { "other objects".to_string() } else { format!("'{}'", o.hidden_by.join("', '")) };
-            findings.push(Finding { code: "V102", object: name, message: format!("'{}' is completely hidden behind {by}", o.name), hint: "move it, move what hides it, or choose another camera position ('from', or 'azimuth' / 'elevation')".to_string() });
-        } else if let Some(vf) = o.visible_fraction {
-            if vf < 0.35 && !o.hidden_by.is_empty() {
+        if !w.in_frame {
+            findings.push(Finding { code: "V101", object: name, message: format!("'{}' is outside the picture: the camera does not see it at all", w.name), hint: format!("point the camera at it ( look_at: {} ), move it into view, or widen 'fov'", w.name) });
+        } else if w.image_pct == 0.0 && (!in_front.is_empty() || w.hidden_by.is_empty()) {
+            let by = if w.hidden_by.is_empty() { "other objects".to_string() } else { format!("'{}'", w.hidden_by.join("', '")) };
+            findings.push(Finding { code: "V102", object: name, message: format!("'{}' is completely hidden behind {by}", w.name), hint: "move it, move what hides it, or choose another camera position ('from', or 'azimuth' / 'elevation')".to_string() });
+        } else if w.image_pct > 0.0 {
+            let vf = if w.silhouette > 0.0 { (w.visible / w.silhouette).min(1.0) } else { 1.0 };
+            if vf < 0.35 && !in_front.is_empty() {
                 findings.push(Finding {
                     code: "V103",
                     object: name.clone(),
-                    message: format!("'{}' is {:.0}% hidden behind '{}'", o.name, (1.0 - vf) * 100.0, o.hidden_by.join("', '")),
+                    message: format!("'{}' is {:.0}% hidden behind '{}'", w.name, (1.0 - vf) * 100.0, w.hidden_by.join("', '")),
                     hint: "move it, move what hides it, or choose another camera position".to_string(),
                 });
             }
-            if full_res_px(o.image_pct) < 150.0 && !o.is_light {
+            // small because it is small or far away - not because most of it is behind something
+            let size_pct = w.silhouette.max(w.image_pct);
+            if full_res_px(size_pct) < 150.0 && !w.is_light {
                 findings.push(Finding {
                     code: "V104",
                     object: name.clone(),
-                    message: format!("'{}' is tiny in the picture (about {:.0} pixels of the final image)", o.name, full_res_px(o.image_pct)),
+                    message: format!("'{}' is tiny in the picture (about {:.0} pixels of the final image)", w.name, full_res_px(size_pct)),
                     hint: "move the camera closer ( distance: ... ), narrow 'fov', or make the object larger".to_string(),
                 });
             }
-            if o.touches_frame_edge && o.image_pct < 35.0 && !o.is_light {
-                findings.push(Finding { code: "V105", object: name, message: format!("'{}' is cut off by the edge of the picture", o.name), hint: "move the camera back ( distance: ... ), widen 'fov', or aim the camera with 'look_at'".to_string() });
+            // What other things stand on (a desk under a still life, a road under a car) is the
+            // stage; it normally runs out of the picture.
+            let stage = wholes.iter().any(|o| {
+                o.name != w.name && (o.bounds.min.y - w.bounds.max.y).abs() < 0.02 + 0.01 * w.bounds.size().y && o.bounds.min.x < w.bounds.max.x && o.bounds.max.x > w.bounds.min.x && o.bounds.min.z < w.bounds.max.z && o.bounds.max.z > w.bounds.min.z
+            });
+            if w.edge && w.image_pct < 35.0 && !w.is_light && !stage {
+                findings.push(Finding { code: "V105", object: name, message: format!("'{}' is cut off by the edge of the picture", w.name), hint: "move the camera back ( distance: ... ), widen 'fov', or aim the camera with 'look_at'".to_string() });
             }
         }
     }

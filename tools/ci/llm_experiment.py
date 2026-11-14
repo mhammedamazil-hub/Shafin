@@ -7,6 +7,9 @@ reference and asked for a VL program. The program goes through the real tool:
     round 0:   write            -> vl check
     round k:   repair from the tool's diagnostics, or revise from `vl inspect`
 
+A pair stops early when the model answers DONE, when nothing is left to report, or when
+it sends back the very program it sent before.
+
 Every round is recorded verbatim (reply, program, diagnostics, inspection), the last
 valid program is rendered at low resolution, and everything is written to OUT_DIR.
 Nothing is filtered or retried selectively: failures are data.
@@ -56,8 +59,10 @@ def chat(backend, messages, num_predict):
                      "prompt_eval_seconds": round(j.get("prompt_eval_duration", 0) / 1e9, 1),
                      "generation_seconds": round(j.get("eval_duration", 0) / 1e9, 1)})
         return j.get("message", {}).get("content", ""), meta
-    # OpenAI-compatible endpoint (reasoning models need room for their hidden reasoning)
-    body = {"model": backend["model"], "messages": messages, "temperature": 0.2, "seed": 1, "max_tokens": num_predict + 2500}
+    # OpenAI-compatible endpoint. A reasoning model spends output tokens on reasoning that is
+    # never returned; with too small a limit the first experiment got cut-off programs and
+    # HTTP 400 "exhausted its output token limit". The limit is therefore set per backend.
+    body = {"model": backend["model"], "messages": messages, "temperature": 0.2, "seed": 1, "max_tokens": backend.get("max_tokens", num_predict + 2500)}
     meta = {}
     for attempt in range(3):
         status, text, secs = http_json(backend["url"], body, 240)
@@ -108,6 +113,14 @@ def findings_of(inspect_text):
 def main():
     req = json.load(open(sys.argv[1]))
     out_dir = sys.argv[2]
+    only = int(sys.argv[3]) if len(sys.argv) > 3 else None
+    if only is not None:
+        if only >= len(req["backends"]):
+            os.makedirs(out_dir, exist_ok=True)
+            json.dump({"request": req, "runs": [], "note": f"no backend with index {only}"}, open(os.path.join(out_dir, "results.json"), "w"), indent=1)
+            print(f"no backend with index {only}; nothing to do")
+            return 0
+        req = dict(req, backends=[req["backends"][only]])
     vl = os.path.abspath(req.get("vl_binary", "target/release/vl"))
     reference = open(req.get("reference", "skills/vl-scene/references/language.md")).read()
     system = ("You write programs in VL, a small language that describes 3D scenes; a tool renders them into images. "
@@ -144,6 +157,8 @@ def main():
             messages = [{"role": "system", "content": system},
                         {"role": "user", "content": "Write a VL program for this scene:\n" + prompt["text"]}]
             last_valid = None
+            previous_program = None
+            open_remarks = 0
             try:
                 for k in range(max_rounds):
                     if backend["type"] != "ollama" and (k > 0 or prompt is not req["prompts"][0]):
@@ -157,9 +172,17 @@ def main():
                     open(os.path.join(d, f"round{k}.reply.txt"), "w").write(reply)
                     if reply.strip().strip(".").upper() == "DONE":
                         rnd["outcome"] = "model declared the picture finished"
+                        rec["declared_done_with_open_remarks"] = open_remarks
                         break
                     path = os.path.join(d, f"round{k}.vl")
-                    open(path, "w").write(extract_program(reply))
+                    program = extract_program(reply)
+                    open(path, "w").write(program)
+                    if program == previous_program:
+                        # sending the same feedback again would produce the same reply (seed and temperature are fixed)
+                        rnd["outcome"] = "identical resubmission"
+                        rec["identical_resubmission"] = True
+                        break
+                    previous_program = program
                     rc, out, err = run([vl, "check", path, "--json"])
                     try:
                         cj = json.loads(out)
@@ -181,6 +204,7 @@ def main():
                         f = findings_of(itext)
                         rnd["visual_findings"] = [x.split(" ")[0] for x in f]
                         rnd["outcome"] = "valid"
+                        open_remarks = len(f) + (cj.get("warnings") or 0)
                         if not f and not cj.get("warnings"):
                             rnd["outcome"] = "valid, nothing reported"
                             break
@@ -190,6 +214,10 @@ def main():
                                     "program in a ```vl block. If the picture is right, reply with exactly: DONE")
                     messages += [{"role": "assistant", "content": reply}, {"role": "user", "content": feedback}]
                 rec["status"] = "valid program" if last_valid else "no valid program"
+                # the state of the last program the model sent (an identical resubmission or DONE leaves it as it was)
+                checked = [r for r in rec["rounds"] if "valid" in r]
+                rec["final_valid"] = bool(checked and checked[-1]["valid"])
+                rec["final_open_remarks"] = (len(checked[-1].get("visual_findings", [])) + (checked[-1].get("warnings") or 0)) if rec["final_valid"] else None
                 rec["first_attempt_valid"] = bool(rec["rounds"] and rec["rounds"][0].get("valid"))
                 rec["rounds_used"] = len(rec["rounds"])
                 if last_valid:

@@ -102,5 +102,53 @@ fn merge_repeats(diags: Vec<Diag>, source: &Source) -> Vec<Diag> {
             d.message = format!("{} (also on line{} {}{more})", d.message, if lines.len() == 1 { "" } else { "s" }, shown.join(", "));
         }
     }
+    limit_per_code(out, source)
+}
+
+/// At most three warnings of one kind are spelt out; the rest become one line. A scene in
+/// which twenty things overlap needs one piece of advice, not twenty.
+fn limit_per_code(diags: Vec<Diag>, source: &Source) -> Vec<Diag> {
+    const SHOWN: usize = 3;
+    let mut seen: Vec<(&'static str, usize)> = Vec::new();
+    let mut rest: Vec<(&'static str, Vec<usize>, Diag)> = Vec::new();
+    let mut out: Vec<Diag> = Vec::new();
+    for d in diags {
+        if d.severity != vl_core::diag::Severity::Warning {
+            out.push(d);
+            continue;
+        }
+        let n = match seen.iter_mut().find(|s| s.0 == d.code) {
+            Some(s) => {
+                s.1 += 1;
+                s.1
+            }
+            None => {
+                seen.push((d.code, 1));
+                1
+            }
+        };
+        if n <= SHOWN {
+            out.push(d);
+        } else {
+            let line = source.line_col(d.span.start).0;
+            match rest.iter_mut().find(|r| r.0 == d.code) {
+                Some(r) => r.1.push(line),
+                None => rest.push((d.code, vec![line], d)),
+            }
+        }
+    }
+    for (_, mut lines, mut d) in rest {
+        let n = lines.len();
+        if n == 1 {
+            out.push(d); // a fourth one is simply shown
+            continue;
+        }
+        lines.sort_unstable();
+        lines.dedup();
+        let shown: Vec<String> = lines.iter().take(10).map(|l| l.to_string()).collect();
+        d.message = format!("{n} more remarks of this kind, on line{} {}{}", if lines.len() == 1 { "" } else { "s" }, shown.join(", "), if lines.len() > 10 { ", ..." } else { "" });
+        d.hint = Some("the advice above applies to each of them".to_string());
+        out.push(d);
+    }
     out
 }

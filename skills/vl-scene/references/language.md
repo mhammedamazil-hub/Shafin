@@ -39,7 +39,7 @@ Prefer relations; the tool computes exact contact, so nothing floats or sinks.
 
 ```
 on: table                 stand on top of `table`;  add  at: [dx, dz]  to shift sideways from its centre
-in: bowl                  rest inside a `cup` (an orange in a bowl, a pencil pot);  on: plate  works the same way
+in: bowl                  rest inside a `cup`; several things put in the same one pile up by themselves
 right_of: table           also  left_of  in_front_of  behind  above  below ;  add  gap: 0.1
 at: [x, z]                stand on the floor at that spot
 at: [x, y, z]             centre of the object in space (only when nothing else fits)
@@ -98,9 +98,10 @@ camera { look_at: vase, from: [2, 1.5, 3], f_stop: 2.8, focus: vase }
 render { size: [1280, 720], samples: 64 }
 ```
 
-Without `from`, the camera is placed automatically so that `look_at` fills the frame; `azimuth`
-turns it around the target (0 = front, 90 = right side) and `elevation` raises it. Without any
-camera, the whole scene is framed. `f_stop` blurs what is out of focus (smaller = more blur).
+Without `from`, the camera is placed automatically: `look_at` is in the middle with its
+surroundings in view (`distance: 0.6` moves closer). `azimuth` turns the camera around the target
+(0 = front, 90 = right side) and `elevation` raises it. Without any camera, the whole scene is
+framed. `f_stop` blurs what is out of focus (smaller = more blur).
 
 ## Complete example
 

@@ -1,19 +1,55 @@
 {
-  "request_id": 1,
-  "purpose": "First measurement of the central question: can small text-only LLMs write VL from a one-page reference, and does the tool's feedback let them repair their programs?",
+  "request_id": 2,
+  "purpose": "Second measurement, on prompts no model output has been seen for and with one model family the compiler was never tried on: can small text-only LLMs write VL from the one-page reference, and does the tool's feedback let them repair their programs?",
+  "notes": [
+    "The compiler and the reference were changed after run 1 using run 1's transcripts. Run 1's prompts are therefore not reused here.",
+    "llama3.2:3b is new in this run: no output of that model was seen while the language was being changed.",
+    "The three prompts were fixed before any model saw them. None resembles the worked example in the reference."
+  ],
   "time_budget_minutes": 34,
   "max_rounds": 3,
-  "num_predict": 700,
+  "num_predict": 800,
   "hosted_pause_seconds": 16,
-  "render": {"width": 480, "samples": 24},
+  "render": {
+    "width": 480,
+    "samples": 24
+  },
   "backends": [
-    {"name": "gpt-oss-20b-hosted", "type": "openai", "url": "https://text.pollinations.ai/openai", "model": "openai"},
-    {"name": "qwen2.5-coder-1.5b", "type": "ollama", "model": "qwen2.5-coder:1.5b"},
-    {"name": "qwen2.5-coder-3b", "type": "ollama", "model": "qwen2.5-coder:3b"}
+    {
+      "name": "gpt-oss-20b-hosted",
+      "type": "openai",
+      "url": "https://text.pollinations.ai/openai",
+      "model": "openai",
+      "max_tokens": 12000
+    },
+    {
+      "name": "qwen2.5-coder-1.5b",
+      "type": "ollama",
+      "model": "qwen2.5-coder:1.5b"
+    },
+    {
+      "name": "qwen2.5-coder-3b",
+      "type": "ollama",
+      "model": "qwen2.5-coder:3b"
+    },
+    {
+      "name": "llama3.2-3b",
+      "type": "ollama",
+      "model": "llama3.2:3b"
+    }
   ],
   "prompts": [
-    {"id": "desk", "text": "A wooden table with a red ball, a white ceramic mug and a stack of three books on it, in daylight."},
-    {"id": "snowman", "text": "A snowman on snowy ground: three white balls of decreasing size stacked on top of each other, a black cylinder hat on top, and two small dark spheres for eyes on the front of the head."},
-    {"id": "night-room", "text": "A room corner at night with no daylight: a sofa built from boxes, a small round side table next to it with a glass sphere on it, and one warm lamp that lights the scene."}
+    {
+      "id": "billiards",
+      "text": "Three billiard balls - one red, one yellow, one black - lying next to each other on a table covered with green cloth, lit by a single lamp hanging above the table. The room is dark."
+    },
+    {
+      "id": "fruit-bowl",
+      "text": "A white bowl holding four oranges, standing on a kitchen counter, with a drinking glass beside it, in morning sunlight."
+    },
+    {
+      "id": "street",
+      "text": "A street at dusk: a grey road, a row of four street lamps along one side (each a tall thin pole with a glowing ball on top) and a red car made of two boxes with four dark wheels."
+    }
   ]
 }
