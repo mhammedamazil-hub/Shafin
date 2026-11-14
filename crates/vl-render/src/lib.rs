@@ -3,6 +3,7 @@
 
 pub mod accel;
 pub mod bsdf;
+pub mod denoise;
 pub mod geom;
 pub mod inspect;
 pub mod integrator;

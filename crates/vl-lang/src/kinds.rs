@@ -19,7 +19,7 @@ pub const MATERIAL_PROPS: &[&str] = &[
     "preset", "color", "roughness", "metallic", "specular", "ior", "transmission", "coat", "coat_roughness", "emission", "emission_strength", "sheen", "bump", "bump_strength", "absorb_color", "absorb_distance", "thin",
 ];
 pub const LIGHT_PROPS: &[&str] = &["shape", "radius", "size", "width", "depth", "power", "brightness", "color", "temperature", "aim", "visible", "at", "on", "above", "below", "left_of", "right_of", "in_front_of", "behind", "gap", "rotate"];
-pub const RENDER_PROPS: &[&str] = &["size", "width", "height", "samples", "max_depth", "seed", "exposure", "exposure_bias", "white_balance", "saturation", "contrast", "tonemap", "noise_target", "caustics"];
+pub const RENDER_PROPS: &[&str] = &["size", "width", "height", "samples", "max_depth", "seed", "exposure", "exposure_bias", "white_balance", "saturation", "contrast", "tonemap", "noise_target", "caustics", "denoise"];
 pub const CAMERA_PROPS: &[&str] = &["look_at", "from", "distance", "azimuth", "elevation", "fov", "focal_length", "f_stop", "focus", "blades"];
 pub const SKY_PROPS: &[&str] = &["time", "sun_elevation", "sun_azimuth", "turbidity", "sun_size", "strength", "sun_strength", "sky_strength", "ground"];
 pub const ENVIRONMENT_PROPS: &[&str] = &["color", "strength", "top", "horizon", "bottom"];
@@ -852,6 +852,7 @@ impl Ev {
         out.saturation = self.num(&mut props, &["saturation"], r.saturation as f64, 0.0, 4.0) as f32;
         out.contrast = self.num(&mut props, &["contrast"], r.contrast as f64, 0.2, 4.0) as f32;
         out.caustics = self.boolean(&mut props, &["caustics"], r.caustics);
+        out.denoise = self.boolean(&mut props, &["denoise"], r.denoise);
         if let Some((v, span)) = props.take(&["tonemap"]) {
             match &v {
                 Value::Str(s) if s == "filmic" => out.tonemap = Tonemap::Filmic,

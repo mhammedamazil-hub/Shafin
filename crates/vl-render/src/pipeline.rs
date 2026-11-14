@@ -74,6 +74,10 @@ pub fn render_scene(scene: &Scene, opts: &Options) -> Output {
     if frame.bad_samples > 0 {
         warnings.push(format!("{} samples were not finite and were discarded", frame.bad_samples));
     }
-    let image = post::develop(&frame, &frame.color, &scene.post, ev);
+    let image = if scene.post.denoise {
+        post::develop(&frame, &crate::denoise::denoise(&frame, opts.threads), &scene.post, ev)
+    } else {
+        post::develop(&frame, &frame.color, &scene.post, ev)
+    };
     Output { image, frame, ev, auto_exposure, seconds: t0.elapsed().as_secs_f64(), warnings }
 }

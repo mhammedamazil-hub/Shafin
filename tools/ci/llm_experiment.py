@@ -60,23 +60,35 @@ def chat(backend, messages, num_predict):
                      "generation_seconds": round(j.get("eval_duration", 0) / 1e9, 1)})
         return j.get("message", {}).get("content", ""), meta
     # OpenAI-compatible endpoint. A reasoning model spends output tokens on reasoning that is
-    # never returned; with too small a limit the first experiment got cut-off programs and
-    # HTTP 400 "exhausted its output token limit". The limit is therefore set per backend.
-    body = {"model": backend["model"], "messages": messages, "temperature": 0.2, "seed": 1, "max_tokens": backend.get("max_tokens", num_predict + 2500)}
-    meta = {}
-    for attempt in range(3):
-        status, text, secs = http_json(backend["url"], body, 240)
-        meta = {"status": status, "seconds": round(secs, 1), "attempts": attempt + 1}
+    # never returned. In two experiments the hosted model answered one prompt in three and
+    # otherwise failed with HTTP 400 "exhausted its output token limit", whatever max_tokens
+    # said. The request is therefore tried in several spellings, lowest reasoning effort
+    # first, and the one that worked is recorded.
+    base = {"model": backend["model"], "messages": messages, "temperature": 0.2, "seed": 1}
+    limit = backend.get("max_tokens", num_predict + 2500)
+    variants = backend.get("variants") or [
+        {"max_tokens": limit, "reasoning_effort": "low"},
+        {"max_completion_tokens": limit, "reasoning_effort": "low"},
+        {"max_tokens": limit, "reasoning": {"effort": "low"}},
+        {"reasoning_effort": "low"},
+        {"max_tokens": limit},
+    ]
+    meta, tried = {}, []
+    for vi, extra in enumerate(variants):
+        status, text, secs = http_json(backend["url"], dict(base, **extra), 240)
+        tried.append({"variant": extra, "status": status, "seconds": round(secs, 1)})
+        meta = {"status": status, "seconds": round(secs, 1), "attempts": len(tried), "tried": tried}
         if status == 200:
             try:
                 j = json.loads(text)
-                meta.update({"served_model": j.get("model"), "usage": j.get("usage")})
+                meta.update({"served_model": j.get("model"), "usage": j.get("usage"), "variant": extra})
                 return j["choices"][0]["message"].get("content") or "", meta
             except Exception as e:  # noqa: BLE001
                 meta["error"] = f"unparseable response: {e}: {text[:300]}"
         else:
             meta["error"] = text[:500]
-        time.sleep(20 * (attempt + 1))
+            tried[-1]["error"] = text[:160]
+        time.sleep(backend.get("retry_pause_seconds", 20))
     return None, meta
 
 

@@ -110,7 +110,7 @@ pub fn lower(ev: &mut Ev, had_errors: bool, line_of: &dyn Fn(Span) -> usize) -> 
     let mut scene = Scene { materials: Vec::new(), ..Scene::default() };
     let r = &ev.render;
     scene.film = Film { width: r.width, height: r.height, spp: r.samples, min_spp: (r.samples / 4).max(8).min(r.samples), noise_target: r.noise_target, max_depth: r.max_depth, seed: r.seed, reflective_caustics: r.caustics, ..Film::default() };
-    scene.post = Post { exposure_ev: r.exposure, exposure_bias: r.exposure_bias, tonemap: r.tonemap, white_balance: r.white_balance, saturation: r.saturation, contrast: r.contrast, ..Post::default() };
+    scene.post = Post { exposure_ev: r.exposure, exposure_bias: r.exposure_bias, tonemap: r.tonemap, white_balance: r.white_balance, saturation: r.saturation, contrast: r.contrast, denoise: r.denoise, ..Post::default() };
     // A program that sets up lamps and says nothing about the sky is lit by its lamps: a
     // 1200-lumen bulb next to the sun (100 000 lux) changes nothing, which is never what
     // the writer of "light lamp { ... }" meant. Such a scene gets the night sky.

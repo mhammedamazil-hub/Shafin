@@ -1,10 +1,8 @@
 {
-  "request_id": 2,
-  "purpose": "Second measurement, on prompts no model output has been seen for and with one model family the compiler was never tried on: can small text-only LLMs write VL from the one-page reference, and does the tool's feedback let them repair their programs?",
+  "request_id": 3,
+  "purpose": "Retry of the two prompts of request 2 that the hosted model never answered (HTTP 400, output token limit), with lower reasoning effort. Same prompts, same reference; the compiler differs from request 2 only by the denoiser, which does not affect what is accepted.",
   "notes": [
-    "The compiler and the reference were changed after run 1 using run 1's transcripts. Run 1's prompts are therefore not reused here.",
-    "llama3.2:3b is new in this run: no output of that model was seen while the language was being changed.",
-    "The three prompts were fixed before any model saw them. None resembles the worked example in the reference."
+    "Only the hosted backend runs. Its answers to these two prompts have never been seen: both attempts of request 2 failed before any text was returned."
   ],
   "time_budget_minutes": 34,
   "max_rounds": 3,
@@ -21,28 +19,9 @@
       "url": "https://text.pollinations.ai/openai",
       "model": "openai",
       "max_tokens": 12000
-    },
-    {
-      "name": "qwen2.5-coder-1.5b",
-      "type": "ollama",
-      "model": "qwen2.5-coder:1.5b"
-    },
-    {
-      "name": "qwen2.5-coder-3b",
-      "type": "ollama",
-      "model": "qwen2.5-coder:3b"
-    },
-    {
-      "name": "llama3.2-3b",
-      "type": "ollama",
-      "model": "llama3.2:3b"
     }
   ],
   "prompts": [
-    {
-      "id": "billiards",
-      "text": "Three billiard balls - one red, one yellow, one black - lying next to each other on a table covered with green cloth, lit by a single lamp hanging above the table. The room is dark."
-    },
     {
       "id": "fruit-bowl",
       "text": "A white bowl holding four oranges, standing on a kitchen counter, with a drinking glass beside it, in morning sunlight."

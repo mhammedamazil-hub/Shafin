@@ -18,7 +18,7 @@ use vl_render::pipeline::{render_scene, Options};
 const USAGE: &str = "usage:
   vl check   FILE [--json]
   vl inspect FILE [--json] [--threads N]
-  vl render  FILE -o OUT.png [--width W] [--height H] [--samples N] [--threads N] [--json] [--quiet] [--no-inspect]
+  vl render  FILE -o OUT.png [--width W] [--height H] [--samples N] [--threads N] [--json] [--quiet] [--no-inspect] [--no-denoise]
   vl version
 FILE may be '-' to read the program from standard input.";
 
@@ -29,6 +29,7 @@ struct Args {
     json: bool,
     quiet: bool,
     no_inspect: bool,
+    no_denoise: bool,
     width: Option<u32>,
     height: Option<u32>,
     samples: Option<u32>,
@@ -38,7 +39,7 @@ struct Args {
 fn parse_args() -> Result<Args, String> {
     let mut it = std::env::args().skip(1);
     let cmd = it.next().ok_or_else(|| USAGE.to_string())?;
-    let mut a = Args { cmd, file: None, out: None, json: false, quiet: false, no_inspect: false, width: None, height: None, samples: None, threads: vl_core::par::available_threads() };
+    let mut a = Args { cmd, file: None, out: None, json: false, quiet: false, no_inspect: false, no_denoise: false, width: None, height: None, samples: None, threads: vl_core::par::available_threads() };
     let num = |name: &str, v: Option<String>, lo: u32, hi: u32| -> Result<u32, String> {
         let v = v.ok_or_else(|| format!("{name} needs a value"))?;
         match v.parse::<u32>() {
@@ -51,6 +52,7 @@ fn parse_args() -> Result<Args, String> {
             "--json" => a.json = true,
             "--quiet" | "-q" => a.quiet = true,
             "--no-inspect" => a.no_inspect = true,
+            "--no-denoise" => a.no_denoise = true,
             "-o" | "--output" => a.out = Some(it.next().ok_or("-o needs a file name")?),
             "--width" => a.width = Some(num("--width", it.next(), 1, 16384)?),
             "--height" => a.height = Some(num("--height", it.next(), 1, 16384)?),
@@ -153,6 +155,9 @@ fn run() -> Result<ExitCode, String> {
     if let Some(s) = a.samples {
         scene.film.spp = s;
         scene.film.min_spp = scene.film.min_spp.min(s);
+    }
+    if a.no_denoise {
+        scene.post.denoise = false;
     }
     scene.validate().map_err(|e| format!("internal error: scene became invalid after overrides: {}", e.join("; ")))?;
     let scene = c.scene.as_ref().unwrap();

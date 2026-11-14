@@ -269,11 +269,12 @@ pub struct RenderSpec {
     pub saturation: f32,
     pub contrast: f32,
     pub caustics: bool,
+    pub denoise: bool,
 }
 
 impl Default for RenderSpec {
     fn default() -> RenderSpec {
-        RenderSpec { width: 1280, height: 720, samples: 64, max_depth: 12, seed: 1, noise_target: 0.0, exposure: None, exposure_bias: 0.0, tonemap: Tonemap::Filmic, white_balance: 6500.0, saturation: 1.0, contrast: 1.0, caustics: false }
+        RenderSpec { width: 1280, height: 720, samples: 64, max_depth: 12, seed: 1, noise_target: 0.0, exposure: None, exposure_bias: 0.0, tonemap: Tonemap::Filmic, white_balance: 6500.0, saturation: 1.0, contrast: 1.0, caustics: false, denoise: true }
     }
 }
 
