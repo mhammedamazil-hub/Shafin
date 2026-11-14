@@ -16,7 +16,7 @@ group g { ... objects ... }                       objects that are placed togeth
 ```
 
 Comments start with `#` or `//`. Separate properties with commas or new lines.
-Objects must be defined before other objects refer to them.
+Every statement begins with a kind (`box`, `sphere`, `light` ...), then the name you choose.
 
 ## Shapes
 

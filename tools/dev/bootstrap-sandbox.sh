@@ -61,3 +61,15 @@ ENV
 echo "[bootstrap] done. Run:  . $ROOT/env.sh"
 "$PREFIX/bin/rustc" --version
 "$PREFIX/bin/cargo" --version
+
+# A restored sandbox snapshot has been seen to re-encode the non-UTF-8 bytes of binary test
+# data (2026-11-14: crates/vl-image/tests/data/ref_dynamic.bin grew from 29972 to 32362
+# bytes). Nothing is changed here; this only tells you if it has happened again.
+if command -v git >/dev/null 2>&1; then
+  changed=$(git -C "$(dirname "$0")/../.." status --short -- crates/vl-image/tests/data 2>/dev/null || true)
+  if [ -n "$changed" ]; then
+    echo "[bootstrap] WARNING: binary test data differs from git:"
+    echo "$changed"
+    echo "[bootstrap] if you did not change it, restore it with:  git checkout -- crates/vl-image/tests/data"
+  fi
+fi

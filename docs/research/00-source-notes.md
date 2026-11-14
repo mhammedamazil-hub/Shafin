@@ -93,3 +93,27 @@ by section E. A synthesised research report (`01-research-report.md`) has not be
   3.4K-token request in 23 s. It is a third party with unknown limits and retention, is not
   reproducible, and is used only as an optional extra backend that receives the language
   reference and scene descriptions.
+
+## F. Denoising (checked 2026-11-14)
+
+Used by `crates/vl-render/src/denoise.rs`.
+
+- H. Dammertz, D. Sewtz, J. Hanika, H. Lensch, "Edge-Avoiding A-Trous Wavelet Transform for
+  fast Global Illumination Filtering", Proceedings of High Performance Graphics 2010
+  (programme of HPG 2010, session "Ray Tracing I":
+  https://www.highperformancegraphics.org/previous/www_2010/program.html ; bibliographic
+  record: https://www.bibsonomy.org/bibtex/b88e0379e6de3fab91c0b81d697d01a4). Read only as
+  a bibliographic record and through the SVGF paper's description; the paper itself was
+  not fetched.
+- C. Schied, A. Kaplanyan, C. Wyman, A. Patney, C. R. A. Chaitanya, J. Burgess, S. Liu,
+  C. Dachsbacher, A. Lefohn, M. Salvi, "Spatiotemporal Variance-Guided Filtering: Real-Time
+  Reconstruction for Path-Traced Global Illumination", HPG 2017
+  (https://cg.ivd.kit.edu/publications/2017/svgf/svgf_preprint.pdf ,
+  https://cwyman.org/papers/hpg17_svgf.pdf). Taken from the text of the preprint as
+  returned by a search: the normal weight is max(0, n(p).n(q))^sigma_n; the luminance
+  weight is exp(-|l(p) - l(q)| / (sigma_l * sqrt(g3x3(Var(l(p)))) + eps)); the 3x3 Gaussian
+  prefilter of the variance "is only used to drive the luminance edge-stopping function,
+  and it is not applied to the variance image propagated to the next iteration". The
+  implementation follows these three statements. The values sigma_l = 4 and sigma_n = 64
+  in the code were chosen here (the paper's own values were not in the text I saw).
+

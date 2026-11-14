@@ -78,8 +78,57 @@ Design choices, each motivated by a documented weakness of language models:
   sunk, overlapping) are held back while errors exist, so they never describe side effects
   of a typo.
 
-Placement is sequential (definition order), not a constraint solver. Bounding boxes are
-axis-aligned, so contact for rotated or round objects is the contact of their boxes.
+Placement is sequential, not a constraint solver. Bounding boxes are axis-aligned, so
+contact for rotated or round objects is the contact of their boxes - with one exception:
+
+* **Things put in vessels.** `cup` is a hollow truncated cone (mug, glass, bowl, plate, pot;
+  `tube` is the same without a floor). `in: bowl`, and `on:` such a vessel, rest a thing on
+  the inner floor or against the sloping wall, computed from the vessel's real shape. Balls
+  settle as a heap: every time a ball is added, all balls in that vessel are moved downhill
+  in small steps as long as the heap as a whole gets lower, so a ball rolls off the one it
+  was put on and the ones below make room. This is a relaxation, not a physics simulation:
+  no friction, no bouncing, later balls rest on earlier ones and never the reverse.
+  `crates/vl-cli/tests/placement.rs` checks the result with the renderer's own rays (no
+  ball cuts into anything, every ball touches something).
+
+**Whatever has one sensible reading is accepted**, and a warning says how it was read. This
+rule came out of the two experiments (`docs/experiments/`): small models write `material:
+green`, `light sky { time: morning }`, `on: table, at: [x, y, z]`, `table { size: ... }`
+without the kind, or refer to a table that is created three lines further down. Each of
+these stops a program for no good reason. The codes:
+
+| | what was written | how it is read |
+|---|---|---|
+| W340 | an unknown colour word | a near miss as the colour meant, `dark_`/`light_` + colour as that shade, else grey |
+| W341 | an unknown material | a near miss or `dark`/`light` + material as that material, else a plain surface |
+| W342 | a colour where a material belongs | as the colour |
+| W343 | `at: [x, y, z]` beside a relation | the relation decides the height |
+| W344 | a statement on an object that exists | ignored (objects cannot be changed) |
+| W345 | an unknown property | a unique near miss as that property, else ignored |
+| W346 | a misspelt name of something the writer made | as that thing, if only one is close |
+| W347 | the sun described in a `light` | as `sky { ... }` |
+| W348 | an unknown time of day | daylight |
+| W349 | `in:` something too small | put on top |
+| W350 | `next_to`, `beside`, `near` | to the right |
+| W351 | `table { size: ... }` without its kind | the kind that its properties imply |
+
+Without a warning: a statement that refers to something created further down is read
+after the statement that creates it; a word that is also the name of an object keeps its
+meaning where a colour or material is expected (`sphere orange { color: orange }`).
+Invented statement forms (`car_wheel at: [...]`, `x { ... } for i in 1..4`) stay errors:
+they have no single reading.
+
+While errors exist only errors are shown; a message repeated on many lines is shown once
+with the lines listed; at most three warnings of one kind are spelt out.
+
+**Automatic camera.** With `look_at: thing` and no position, the picture takes in the thing
+and whatever lies within one thing-size of it on every side (a little less downwards), at
+the nearest distance from which that box is wholly in view. With no `look_at`, or a point,
+the whole scene is framed the same way.
+
+**What lights the scene.** Nothing written and no `light`: daylight. A `light` and no sky
+statement: night (the sky model scaled to 1e-5, a moon) so that the lamps matter. `sky { }`
+beside lamps: daylight. `sky { time: sunset }` and similar words set the sun.
 
 ## The renderer
 
@@ -99,12 +148,62 @@ visible normals. Thin-lens camera. Radiance is in cd/m2, so a sunlit scene needs
 | Sun + sky on a matte plane vs the sky model's own quadrature | 16102.98 vs 16103.98 |
 | Light through a glass pane | 0.9215 vs 0.9216 (two Fresnel interfaces) |
 | BSDF sampling vs deterministic quadrature, 11 materials x 3 angles | albedo within 0.001; never above 1 |
-| Ray intersection, 8 shapes, vs dense sampling + bisection | error below 1e-4 m; normals match the implicit gradient |
+| Ray intersection, 11 shapes (three of them hollow vessels), vs dense sampling + bisection | error below 1e-4 m; normals match the implicit gradient |
 
 These tests found and fixed real bugs (wrong box face normals, lights shadowing
 themselves, mis-weighted microfacet samples). They validate light transport, **not**
 photographic realism, and they compare the renderer with analytic results and with its own
 sky model, not with an independent renderer.
+
+### Exposure, light choice, surfaces in the same place
+
+* **Automatic exposure meters the light, not the picture.** A 160-pixel pre-pass measures
+  the light falling on surfaces (radiance divided by surface colour), takes the better-lit
+  half without its top 5%, and sets the exposure so that a white surface there comes out
+  white. Metering the picture's average instead rendered snow grey. `exposure_bias` works
+  as on a camera: +1 is twice as bright.
+* **Which light a shadow ray goes to** is chosen 85% in proportion to power over squared
+  distance and 15% uniformly. Without the uniform share, a surface in the shadow of a strong
+  lamp and lit only by a weak one was speckled (67 of 3000 pixels on one test scene, then 1).
+* **Two surfaces in the same place** (within 2e-5 of each other along the ray): the smaller
+  object is seen - a rug on the floor, paper on a desk - and of two the same size the one
+  written later. Before, rounding decided pixel by pixel. One case comes first: where clear
+  glass stands on something solid, a ray meets the solid surface. Met the other way round,
+  the ray left the glass and went on from a hair beyond the table top, inside the table,
+  and the bottom of every glass looked into a black box.
+
+### Denoising (`src/denoise.rs`)
+
+An edge-avoiding a-trous wavelet filter (Dammertz, Sewtz, Hanika and Lensch, High
+Performance Graphics 2010) guided by the per-pixel variance the integrator measures, with
+the edge-stopping functions of the spatial filter of SVGF (Schied et al., High Performance
+Graphics 2017: normal weight max(0, n.n)^sigma, luminance difference divided by sigma times
+the square root of the 3x3-smoothed variance, the smoothed variance used for the weight
+only). Sources: `docs/research/00-source-notes.md`, section F. The temporal part of SVGF
+does not apply to a still image and is not used. The surface colour of the first hit is divided out, so
+texture is not filtered; five passes with reach 1 to 16 pixels; a neighbour contributes only
+if its normal and depth fit the same surface and its brightness differs from the centre by
+no more than the centre's noise explains. On by default; `render { denoise: false }` or
+`--no-denoise` turns it off.
+
+Measured against converged renders of the same scenes:
+
+| scene | samples | error without | error with |
+|---|---|---|---|
+| fruit bowl in sunlight, 480x270 (8-bit RMSE against 1024 samples) | 32 | 3.77 | 2.50 |
+| lamp at night, 360x240 (8-bit RMSE against 768 samples) | 16 | 4.94 | 2.47 |
+| the same two kinds of scene at 180x120, relative squared error (the test in `vl-cli/tests/denoise.rs`) | 16 | 1 | 1/1.8 and 1/3.5 |
+
+Mean brightness changed by less than 0.15% in every case. Six unit tests state what the
+filter must and must not do (leave a converged frame alone, keep a shadow edge, keep
+texture, not leak light between surfaces, remove a lone spike but keep a steady highlight,
+not depend on the thread count); each was confirmed to fail when the part of the filter it
+is about is switched off.
+
+What it does not do: the one-pixel outlines of objects, where two surfaces share a pixel,
+stay noisy; what is seen in a mirror or through glass has no features of its own, so noisy
+reflections are smoothed across the edges of the reflected things; soft shadow edges lose a
+little sharpness when the noise is strong.
 
 ### Deliberate approximations
 
@@ -137,7 +236,7 @@ sky model, not with an independent renderer.
 
 ### Not implemented (and reported, never silently ignored)
 
-Fog and other participating media; bloom, vignette, grain; denoising; subsurface scattering;
+Fog and other participating media; bloom, vignette, grain; subsurface scattering;
 triangle-mesh import; constructive solid geometry; texture images. `Scene::fog` and the
 post-processing fields exist in the IR; the renderer emits a warning when they are set.
 
@@ -149,15 +248,30 @@ hides it, position in the frame, apparent colour in plain words, exposure statis
 layout map, and findings (`V101` outside the picture, `V102`/`V103` hidden, `V104` tiny,
 `V105` cut off, `V110` mostly empty, `V111` almost black, `V112` blown out).
 
+A language model acts on every finding, so a finding about something that is not a mistake
+costs a round and can talk it out of a good picture. Therefore (tests in
+`crates/vl-cli/tests/inspection.rs`):
+
+* findings are about whole things, not about the parts of a group (a table top hiding two
+  of its own legs is not reported);
+* what is seen through glass or water counts as visible;
+* things stacked, piled, put inside one another or built into one another (a wheel set into
+  a car body) hide each other by design and are not reported as hidden - only what is
+  hidden by something that merely stands in front of it;
+* what other things stand on may run out of the picture;
+* a lamp outside the picture is not reported;
+* "tiny" is judged by the size a thing would have unobscured.
+
 It measures geometry and exposure. It cannot judge whether a picture is beautiful, whether a
-material looks right, or whether the scene matches the request in spirit.
+material looks right, or whether the scene matches the request in spirit. In the second
+experiment it reported nothing about four oranges standing in a tower.
 
 ## Limits of the approach itself
 
-* Scenes are combinations of simple solids. There are no people, animals, plants or organic
-  shapes, and the language model is the only source of structure.
-* Realism depends on procedural materials written in advance (25 presets). Anything outside
-  them is as good as the texture expression the model writes.
-* Rendering cost: about 6 M rays/s on 2 cores for plain materials; the first example scene
-  with procedural wood and concrete took 30 s at 640x360 and 64 samples. 4K has not been
-  rendered or timed yet.
+* Scenes are combinations of simple solids and hollow vessels. There are no people, animals,
+  plants or organic shapes, and the language model is the only source of structure.
+* Realism depends on procedural materials written in advance (33 presets). Anything outside
+  them is as good as the texture expression the model writes. The wood preset still reads
+  as ripples rather than grain on a large table top.
+* Rendering cost: about 6 M rays/s on 2 cores for plain materials. 4K timing is in
+  `docs/STATUS.md`.

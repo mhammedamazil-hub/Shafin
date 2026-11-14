@@ -319,8 +319,17 @@ impl<'a> SceneRt<'a> {
     /// When two surfaces lie in the same place, does object `a` show rather than object `b`?
     /// The smaller thing does (a rug on the floor, a sheet of paper on a desk); of two things
     /// of the same size, the one written later (a cloth the size of the table it covers).
+    ///
+    /// One case comes first: where glass stands on something solid, the solid surface is
+    /// what a ray meets. If the glass were met first, the ray would leave the glass and
+    /// start again a hair beyond the table top - inside the table - and the bottom of every
+    /// glass would look into a dark box.
     #[inline]
     fn shows_over(&self, a: u32, b: u32) -> bool {
+        let clear = |i: u32| self.mats[self.insts[i as usize].material as usize].transmissive;
+        if clear(a) != clear(b) {
+            return clear(b);
+        }
         let (ea, eb) = (self.insts[a as usize].extent, self.insts[b as usize].extent);
         if ea < eb * (1.0 - 1e-4) {
             true

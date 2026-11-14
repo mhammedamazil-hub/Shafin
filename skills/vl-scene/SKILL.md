@@ -45,8 +45,8 @@ Add `--json` to any command to get the same information as one JSON object.
 - Shapes are simple solids, hollow vessels and combinations of them; there are no people,
   animals, plants, fabric folds or detailed meshes. Pictures look like clean product renders
   of simple objects, not like photographs of the real world.
-- Light bent through glass does not form bright focused spots (no caustics), so the surface
-  under a glass looks darker than it would in a photograph.
+- Light bent through glass does not form bright focused spots (no caustics); a glass casts
+  a pale, even shadow.
 - There is no denoiser: with few `samples`, shadowed areas lit by lamps or by reflected light
   look grainy. Raise `samples` (64 to 256) for a final picture.
 - Fog, bloom, vignette and film grain are not available. Images cannot be edited after

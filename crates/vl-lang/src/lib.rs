@@ -162,10 +162,14 @@ fn usable_order(prog: Vec<ast::Stmt>) -> Vec<ast::Stmt> {
                 // what is inside a group or an object is named within it, not at the top level
                 items(body, false, intro, uses);
             }
-            Stmt::For { start, end, body, .. } => {
+            Stmt::For { var, start, end, body } => {
                 idents(start, uses);
                 idents(end, uses);
-                items(body, top, intro, uses);
+                // the loop's own counter is not a reference to anything outside it
+                let mut inner = HashSet::new();
+                items(body, top, intro, &mut inner);
+                inner.remove(var);
+                uses.extend(inner);
             }
             Stmt::If { cond, then, otherwise } => {
                 idents(cond, uses);

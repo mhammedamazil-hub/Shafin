@@ -238,3 +238,36 @@ fn balls_given_nearly_the_same_spot_roll_apart_instead_of_balancing_in_a_tower()
     }
     assert!(on_floor >= 2, "only {on_floor} oranges are at the bottom of the bowl");
 }
+
+#[test]
+fn a_ray_leaving_glass_that_stands_on_a_table_meets_the_table() {
+    // The bottom of a glass block and the table top are the same plane. If the ray met the
+    // glass first it would leave the glass and continue from a hair beyond that plane, inside
+    // the table: the bottom of every glass looked into a black box until this was fixed.
+    let c = compiled(
+        r#"
+        plane ground { }
+        box table { size: [1.2, 0.75, 0.8], material: wood }
+        cylinder block { radius: 4cm, height: 6cm, on: table, material: glass }
+        cup tumbler { radius: 3cm, height: 10cm, wall: 2mm, floor: 8mm, on: table, at: [0.3, 0], material: glass }
+        cylinder can { radius: 4cm, height: 6cm, on: table, at: [-0.3, 0], color: red }
+    "#,
+    );
+    let scene = c.scene.as_ref().unwrap();
+    let rt = SceneRt::build(scene);
+    let id = |name: &str| c.objects.iter().find(|o| o.name == name).unwrap().scene_index.unwrap() as u32;
+    let mut r = Rng::new(31, 0);
+    for (inside_x, inside_y, reach) in [(0.0f32, 0.78f32, 0.03f32), (0.3, 0.752, 0.02)] {
+        // from points inside the glass (the block; the tumbler's floor), downwards at many angles
+        for _ in 0..3000 {
+            let from = vec3(inside_x + (2.0 * r.f32() - 1.0) * reach * 0.5, inside_y, (2.0 * r.f32() - 1.0) * reach * 0.5);
+            let d = vec3((2.0 * r.f32() - 1.0) * 0.3, -1.0, (2.0 * r.f32() - 1.0) * 0.3);
+            let hit = rt.closest(from, d, 0.0, f32::MAX, false).unwrap();
+            assert_eq!(hit.obj, id("table"), "a ray going down inside the glass met '{}' first", scene.objects[hit.obj as usize].name);
+            assert!((from.y + d.y * hit.t - 0.75).abs() < 1e-4, "... at height {}", from.y + d.y * hit.t);
+        }
+    }
+    // an opaque can is unaffected: seen from above, it is the can
+    let hit = rt.closest(vec3(-0.3, 2.0, 0.0), vec3(0.0, -1.0, 0.0), 0.0, f32::MAX, true).unwrap();
+    assert_eq!(hit.obj, id("can"));
+}

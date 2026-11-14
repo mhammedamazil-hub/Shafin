@@ -654,7 +654,7 @@ fn programs_from_the_second_experiment_behave_as_recorded() {
         compile(file, &text)
     };
     // valid when they were written, and still valid
-    for f in ["gpt-oss-20b-hosted_billiards_round0.vl", "qwen2.5-coder-1.5b_billiards_round0.vl", "qwen2.5-coder-3b_billiards_round0.vl", "qwen2.5-coder-3b_fruit-bowl_round0.vl", "qwen2.5-coder-3b_street_round0.vl", "llama3.2-3b_billiards_round2.vl", "llama3.2-3b_fruit-bowl_round0.vl", "llama3.2-3b_street_round0.vl"] {
+    for f in ["gpt-oss-20b-hosted_billiards_round0.vl", "qwen2.5-coder-1.5b_billiards_round0.vl", "qwen2.5-coder-3b_billiards_round0.vl", "qwen2.5-coder-3b_fruit-bowl_round0.vl", "qwen2.5-coder-3b_street_round0.vl", "llama3.2-3b_billiards_round2.vl", "llama3.2-3b_fruit-bowl_round0.vl", "llama3.2-3b_street_round0.vl", "gpt-oss-20b-hosted-r3_fruit-bowl_round2.vl"] {
         let c = check(f);
         assert!(c.scene.is_some(), "{f}: {:?}", c.diags.iter().filter(|d| d.severity == vl_core::diag::Severity::Error).collect::<Vec<_>>());
     }
@@ -665,7 +665,7 @@ fn programs_from_the_second_experiment_behave_as_recorded() {
         assert!(c.scene.is_some(), "{f}: {:?}", c.diags.iter().filter(|d| d.severity == vl_core::diag::Severity::Error).collect::<Vec<_>>());
     }
     // still errors, and meant to be: invented statement forms have no single reading
-    for f in ["qwen2.5-coder-1.5b_street_round0.vl", "llama3.2-3b_fruit-bowl_round1.vl", "llama3.2-3b_street_round1.vl"] {
+    for f in ["qwen2.5-coder-1.5b_street_round0.vl", "llama3.2-3b_fruit-bowl_round1.vl", "llama3.2-3b_street_round1.vl", "gpt-oss-20b-hosted-r3_street_round0.vl"] {
         assert!(check(f).scene.is_none(), "{f} was expected to be rejected");
     }
     // the cloth written as a second table is what the tool says will be seen
