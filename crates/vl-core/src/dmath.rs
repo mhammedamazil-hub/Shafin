@@ -454,8 +454,9 @@ mod tests {
             0.7f32.tan().to_bits(),
         ];
         // f64-evaluated results rounded to f32 are (almost always) the correctly rounded
-        // value; allow 1 ulp against libm here. Cross-platform identity is checked by
-        // the hashes in `tests/determinism.rs` and by CI on three operating systems.
+        // value; allow 1 ulp against libm here. Cross-platform identity is the design goal
+        // of this module but is NOT yet verified: no test compares results across operating
+        // systems or CPU architectures (see docs/architecture.md, "Reproducibility").
         for (g, w) in got.iter().zip(want.iter()) {
             assert!((*g as i64 - *w as i64).abs() <= 1, "{g:#x} vs {w:#x}");
         }

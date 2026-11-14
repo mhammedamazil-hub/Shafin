@@ -1,8 +1,13 @@
 # Source notes (working file)
 
-Raw notes taken while reading. Every entry here was actually retrieved and read
-during the research stage (search result text or page fetch); numbers quoted are
-the papers' own. The synthesised report is `01-research-report.md`.
+Raw notes taken while reading. Sources were found with web search; in almost every case
+only the search-result text was read, not the paper itself (one page was fetched in full:
+the GitHub Models retirement notice). Numbers are quoted as the search results gave them.
+
+**Not yet verified against the primary source** - check before citing: the arXiv
+identifiers and author lists for LQAE (2302.00902), V2L (2403.07874) and "Pattern machines"
+(2307.04721), which were written from memory. Table D's "GitHub Models" row is superseded
+by section E. A synthesised research report (`01-research-report.md`) has not been written.
 
 ## A. LLMs emitting images through text/numeric representations
 
@@ -67,3 +72,24 @@ the papers' own. The synthesised report is `01-research-report.md`.
   toolchain was obtained by a workflow that downloads the official tarballs on a runner, verifies
   SHA-256 against the official channel manifest and publishes them on a hidden git ref
   (`tools/dev/bootstrap-sandbox.sh`).
+* **Open-weight models on a hosted runner (measured, run 43582226851, 2 cores, CPU only,
+  Ollama 0.40.16, fixed 3.4K-token prompt).** The installer leaves `ollama.service`
+  *disabled and inactive* while printing "The Ollama API is now available"; the server has
+  to be started explicitly (`ollama serve`). The first probe (run 43581446661) measured
+  nothing for this reason and still reported success; the probe now fails honestly.
+
+  | model | size | prompt eval | generation | first request | repeat (cached prefix) |
+  |---|---|---|---|---|---|
+  | qwen2.5-coder:1.5b | 986 MB | 28.7 tok/s | 9.0 tok/s | 122 s | 1.6 s |
+  | qwen2.5-coder:3b | 1.9 GB | 14.2 tok/s | 4.8 tok/s | 248 s | 2.6 s |
+  | llama3.2:3b | 2.0 GB | 14.2 tok/s | 4.2 tok/s | 212 s | 3.3 s |
+  | gemma3:4b | 3.4 GB | 13.2 tok/s | 4.4 tok/s | 310 s | 2.8 s |
+  | qwen2.5-coder:7b | 4.7 GB | 6.4 tok/s | 2.2 tok/s | 608 s | 5.4 s |
+
+  Consequences: prefix caching works, so a fixed language reference is paid for once per
+  model; the reference must be short; 7B models are too slow for more than a few samples.
+* **A keyless hosted endpoint exists** (`https://text.pollinations.ai/openai`, anonymous tier):
+  it serves one model, GPT-OSS 20B (open weights, a reasoning model), and answered a
+  3.4K-token request in 23 s. It is a third party with unknown limits and retention, is not
+  reproducible, and is used only as an optional extra backend that receives the language
+  reference and scene descriptions.

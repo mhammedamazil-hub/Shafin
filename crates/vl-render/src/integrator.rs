@@ -206,9 +206,10 @@ pub struct PathResult {
 }
 
 /// Radiance arriving at `o` from direction `d` (unit vector pointing away from `o`).
-/// Largest GGX alpha that path regularisation will impose (roughness 0.5). Measured on the
-/// development scene at 64 spp: a floor of 0.09 left 701 speckle pixels, 0.25 leaves 64, with
-/// the mean image energy unchanged to 0.05%.
+/// Largest GGX alpha that path regularisation will impose (roughness 0.5). Measured on one
+/// development scene at 64 spp: a floor of 0.09 left 701 speckle pixels, 0.25 leaves 64; the
+/// mean display luminance moved by 0.6% (0.1655 -> 0.1644), part of which is the removed
+/// speckles themselves. See docs/architecture.md.
 const REGULARISE_MAX_ALPHA: f32 = 0.25;
 
 pub fn radiance(rt: &SceneRt, mut o: Vec3, mut d: Vec3, rng: &mut Rng, scratch: &mut Scratch, max_depth: u32, clamp: f32) -> PathResult {
