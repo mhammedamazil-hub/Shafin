@@ -1,0 +1,54 @@
+# Source notes (working file)
+
+Raw notes taken while reading. Every entry here was actually retrieved and read
+during the research stage (search result text or page fetch); numbers quoted are
+the papers' own. The synthesised report is `01-research-report.md`.
+
+## A. LLMs emitting images through text/numeric representations
+
+| Key | Source | What it establishes |
+|---|---|---|
+| JPEG-LM | Han, Ghazvininejad, Koh, Tsvetkov, "JPEG-LM: LLMs as Image Generators with Canonical Codec Representations", arXiv:2408.08459 (2024) | A 7B Llama-2 **trained from scratch** on 23M 256x256 images as JPEG (quality 25) bytes + BPE. ~5K tokens per 256x256 image; raw pixels would be 65K (clustered) or 196K tokens; VQ ~1K tokens. 114B JPEG tokens per epoch. No text conditioning (partial-image completion). ImageGPT only modelled 32x32. |
+| SPAE | Yu et al., "SPAE: Semantic Pyramid AutoEncoder for Multimodal Generation with Frozen LLMs", NeurIPS 2023, arXiv:2306.17842 | First frozen-LLM (PaLM 2 / GPT-3.5) image generation via in-context learning. Requires a **trained** tokenizer+decoder; demonstrated at MNIST scale with 50 in-context examples; >500 tokens per image; authors state quality/resolution not on par with image models. |
+| LQAE / V2L | Liu et al. arXiv:2302.00902; Zhu et al. "Beyond Text: Frozen LLMs in Visual Signal Comprehension", CVPR 2024, arXiv:2403.07874 | Same family: map images into an LLM's word vocabulary with a learned autoencoder. |
+| Pattern machines | Mirchandani et al., "Large Language Models as General Pattern Machines", CoRL 2023, arXiv:2307.04721 | Untrained LLMs complete numeric/token grids in-context (ARC-style ASCII grids) - evidence for in-context numeric pattern ability, at small sizes. |
+| LlamaGen / VAR / TiTok | Sun et al. arXiv:2406.06525; Tian et al. NeurIPS 2024; Yu et al. NeurIPS 2024 ("An Image is Worth 32 Tokens") | Discrete-token autoregressive image models. All need a learned tokenizer + a model trained on image tokens. Typical budgets: 256-1024 tokens for 256-512 px. |
+
+## B. Text-only LLMs and visual knowledge through code
+
+| Key | Source | What it establishes |
+|---|---|---|
+| Vision check-up | Sharma et al., "A Vision Check-up for Language Models", CVPR 2024, arXiv:2401.01862 | text -> code -> image. LLMs compose multi-object scenes and spatial relations well; **fail on textures, precise shapes, and surface contact**; images "far from as realistic as natural images" (poor FID vs Stable Diffusion oracle); text-only self-feedback improves results gradually; weaker models could not produce executable drawing code reliably. |
+| SGP-Bench | Qiu et al., "Can Large Language Models Understand Symbolic Graphics Programs?", ICLR 2025, arXiv:2408.08313 | Understanding SVG/CAD programs without vision: 31-63% accuracy (SVG), 29-78% (CAD). Fine-tuning on symbolic programs (SIT) lifts Llama-3.1-8B 46.7 -> 51.4%. SGP-MNIST nearly unsolved. |
+| StarVector / OmniSVG | Rodriguez et al. arXiv:2312.11556; Yang et al. arXiv:2504.06263 | SVG as code. Typical SVGs 1-4K tokens; 16K context "inadequate for complex SVGs"; OmniSVG reaches 30K tokens and still "fails on natural images". |
+| LLaMA-Mesh | Wang et al., NVIDIA, arXiv:2411.09595 | Meshes as OBJ text. Pretrained LLM zero-shot gives only simple shapes; needs fine-tuning on ~125K meshes; coordinates quantised to 64 bins; limited by context length. |
+
+## C. LLMs writing scene programs for a conventional renderer
+
+| Key | Source | What it establishes |
+|---|---|---|
+| SceneCraft | Hu et al., ICML 2024, arXiv:2403.01248 | LLM -> Blender Python, up to ~100 assets; scene-graph blueprint -> numeric constraints; refinement uses a **vision** model (GPT-V) as critic; retrieves pre-made assets. |
+| 3D-GPT | Sun et al., arXiv:2310.12945 | LLM sets parameters of Infinigen procedural generators. |
+| BlenderAlchemy | Huang, Yang, Guibas, arXiv:2404.17672 | VLM edits Blender materials/lighting programs. |
+| LL3M | arXiv:2508.08228 (2025) | Multi-agent LLMs write Blender code for assets. |
+| Scene Language | Zhang et al., CVPR 2025 (Highlight), arXiv:2410.16770 | Scene = program + words + embeddings; DSL embedded in Python; Claude 3.5 Sonnet prompted training-free; rendered with traditional/neural/hybrid renderers. Closest prior art to this project's language idea. |
+| Holodeck / LayoutGPT / LayoutVLM | Yang et al. CVPR 2024 arXiv:2312.09067; Feng et al. 2023; Sun et al. arXiv:2412.02193; also arXiv:2506.05341 | LLMs emitting absolute coordinates frequently produce **out-of-bounds placements and collisions**; systems add constraint solvers / relational constraints. |
+| CADCodeVerify / CADSmith | arXiv:2410.05340; arXiv:2603.26512 | Feedback loops for LLM CAD code. CADSmith argues visual feedback is lossy for dimensions and uses **programmatic geometric validation** (kernel measurements) - direct precedent for numeric inspection feedback. |
+| Co-DSL | arXiv:2610.15290 (2026) | Layout generation framed as LLM program synthesis in a DSL. |
+| Infinigen | Raistrick et al., CVPR 2023, arXiv:2306.09310 | Fully procedural photorealism is possible but costly: 182 hand-written generators / 1070 parameters, ~16M polygons per scene, 3.5 h wall time per 1080p pair, ~24 GB RAM, built on Blender. |
+
+## D. Engineering references
+
+| Key | Source | Use |
+|---|---|---|
+| POV-Ray SDL | https://en.wikipedia.org/wiki/POV-Ray | Prior scene-description language: Turing-complete SDL, macros/loops, CSG, media, radiosity. |
+| Mitsuba 3 | https://github.com/mitsuba-renderer/mitsuba3 (BSD; `pip install mitsuba`; `scalar_rgb` CPU variant) | Candidate backend and independent reference renderer. |
+| OpenPBR | OpenPBR Surface specification v1.1.2 (ASWF, 2026-10-28) | Parameter set for the material model; cites Burley 2012, Heitz 2018. |
+| GGX VNDF | Heitz, "Sampling the GGX Distribution of Visible Normals", JCGT 7(4), 2018 | Microfacet importance sampling. |
+| A-trous | Dammertz et al., "Edge-Avoiding A-Trous Wavelet Transform for fast Global Illumination Filtering", HPG 2010; Schied et al., SVGF, HPG 2017 | Non-neural Monte Carlo denoising with feature buffers. |
+| libvips | https://github.com/libvips/libvips | Demand-driven, tile-based, low-memory image processing architecture. |
+| NIQE / NSS | Mittal, Soundararajan, Bovik, IEEE SPL 20:209-212 (2013); Field, JOSA A 4(12), 1987 | Natural-scene statistics as model-free "naturalness" indicators. |
+| Agent Skills | https://github.com/agentskills/agentskills (docs/specification.mdx) | `SKILL.md` format: `name` (<=64, lowercase/hyphen, = folder name), `description` (<=1024); optional `license`, `compatibility`, `metadata`; `scripts/`, `references/`, `assets/`; keep body < 500 lines. |
+| MCP | https://modelcontextprotocol.io (revisions 2025-06-18, 2025-11-25, 2026-07-28) | JSON-RPC tool protocol. 2026-07-28 removed the initialize handshake/sessions; older clients still send `initialize`. |
+| GitHub Models | docs.github.com/en/github-models; endpoint `https://models.github.ai/inference` | OpenAI-compatible; usable from Actions with `permissions: models: read`; free tier ~8K input / 4K output tokens per request, 50-150 requests/day. |
+| Rust FP determinism | Rust std docs (`f64::ln` etc.: "precision ... is non-deterministic"), community reports | +,-,*,/,sqrt are IEEE-exact everywhere; transcendental functions come from the platform libm and differ across platforms -> need an in-tree math kernel for bit-reproducible rendering. |

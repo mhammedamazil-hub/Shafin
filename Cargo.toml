@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+members = ["crates/vl-core", "crates/vl-image", "crates/vl-lang", "crates/vl-render", "crates/vl-cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+# The project deliberately has ZERO third-party crates (see docs/architecture.md):
+# portable offline builds, no supply chain, and every numeric routine is in-tree
+# so rendering can be bit-reproducible across platforms.
+
+[profile.release]
+opt-level = 3
+debug = false
+codegen-units = 16
+panic = "unwind"
+
+[profile.dev]
+opt-level = 1
+
+[profile.test]
+opt-level = 2

@@ -1,0 +1,15 @@
+[package]
+name = "vl-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "vl"
+path = "src/main.rs"
+
+[dependencies]
+vl-core = { path = "../vl-core" }
+vl-lang = { path = "../vl-lang" }
+vl-image = { path = "../vl-image" }
+vl-render = { path = "../vl-render" }
