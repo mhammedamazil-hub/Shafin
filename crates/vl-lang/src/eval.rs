@@ -130,6 +130,8 @@ pub(crate) struct Content {
     pub(crate) r: f32,
     pub(crate) half_h: f32,
     pub(crate) ball: bool,
+    /// The scene node, once it exists (so that a ball can be nudged when another joins it).
+    pub(crate) node: Option<usize>,
 }
 
 impl Vessel {
@@ -212,6 +214,63 @@ impl Vessel {
         let rho = 0.5 * (lo + hi);
         let (rho, y) = if at(rho) <= best?.2 { (rho, at(rho)) } else { (rho0, best?.2) };
         Some((cx + rho * dmath::cos(ang), cz + rho * dmath::sin(ang), y))
+    }
+
+    /// Let a heap of balls come to rest together.
+    ///
+    /// `balls` are (x, z, radius) in the order they were put in; `fixed` is everything else
+    /// already inside. Each ball rests on the floor, the wall, the fixed things and the
+    /// balls before it. The positions are moved downhill, one ball and one small step at a
+    /// time, as long as the heap as a whole gets lower - so a ball put on top of another
+    /// rolls off it, and the one underneath is pushed aside to make room. Returns the
+    /// heights of the undersides, or `None` if some ball is outside the opening.
+    pub(crate) fn relax(&self, fixed: &[Content], balls: &mut [(f32, f32, f32)]) -> Option<Vec<f32>> {
+        let heights = |balls: &[(f32, f32, f32)]| -> Option<(f32, Vec<f32>)> {
+            let mut resting: Vec<Content> = fixed.to_vec();
+            let (mut total, mut ys) = (0.0f32, Vec::with_capacity(balls.len()));
+            for &(x, z, w) in balls {
+                let y = self.settle(&resting, w, true, x, z)?;
+                resting.push(Content { c: vec3(x, y + w, z), r: w, half_h: w, ball: true, node: None });
+                total += y;
+                ys.push(y);
+            }
+            Some((total, ys))
+        };
+        let (mut total, mut ys) = heights(balls)?;
+        let smallest = balls.iter().map(|b| b.2).fold(f32::MAX, f32::min);
+        let mut step = 0.25 * smallest;
+        for _ in 0..400 {
+            if step < 2e-3 * smallest {
+                break;
+            }
+            let mut moved = false;
+            for i in 0..balls.len() {
+                let here = balls[i];
+                let mut best: Option<((f32, f32, f32), f32, Vec<f32>)> = None;
+                for j in 0..8 {
+                    let ang = std::f32::consts::TAU * j as f32 / 8.0;
+                    balls[i] = (here.0 + step * dmath::cos(ang), here.1 + step * dmath::sin(ang), here.2);
+                    if let Some((t, y)) = heights(balls) {
+                        if t < total - 1e-6 && best.as_ref().map(|b| t < b.1).unwrap_or(true) {
+                            best = Some((balls[i], t, y));
+                        }
+                    }
+                }
+                match best {
+                    Some((pos, t, y)) => {
+                        balls[i] = pos;
+                        total = t;
+                        ys = y;
+                        moved = true;
+                    }
+                    None => balls[i] = here,
+                }
+            }
+            if !moved {
+                step *= 0.5;
+            }
+        }
+        Some(ys)
     }
 
     /// Underside of a ball too big for the opening: it sits in the rim like an egg in an egg cup.
@@ -329,6 +388,9 @@ pub struct Ev {
     steps: u64,
     pub(crate) define_depth: u32,
     pub(crate) quiet_renames: u32,
+    /// Names the program gives to things, with where (byte offset, line): for the message
+    /// about a name that is used above the statement that creates it.
+    pub later: HashMap<String, (usize, usize)>,
     /// Set by `place`: the vessel the thing just placed was put in.
     pub(crate) placed_inside: Option<usize>,
     /// What already rests in each vessel, per frame in which things were put there.
@@ -385,6 +447,7 @@ impl Ev {
             steps: 0,
             define_depth: 0,
             quiet_renames: 0,
+            later: HashMap::new(),
             placed_inside: None,
             contents: HashMap::new(),
             counters: HashMap::new(),
@@ -460,11 +523,28 @@ impl Ev {
             return Some(v);
         }
         let names = self.all_names();
-        // a misspelling of exactly one existing name is read as that name
-        if let Some(sg) = suggest_unique(name, names.iter().map(|s| s.as_str()), 2).map(String::from) {
+        // A misspelling of exactly one thing the writer made (an object, a variable, a material)
+        // is read as that thing. Words of the language are not candidates: 'table', not yet
+        // defined, once became the material 'marble'.
+        let mut made: Vec<String> = Vec::new();
+        for s in &self.scopes {
+            made.extend(s.keys().cloned());
+        }
+        for f in &self.frames {
+            made.extend(f.names.keys().cloned());
+        }
+        made.extend(self.mat_names.keys().cloned());
+        if let Some(sg) = suggest_unique(name, made.iter().map(|s| s.as_str()), 2).map(String::from) {
             if let Some(v) = self.try_lookup(&sg) {
                 self.warn("W346", span, format!("unknown name '{name}'; it was read as '{sg}'"), format!("write  {sg}"));
                 return Some(v);
+            }
+        }
+        // used before it is made: say so, and where it is made
+        if let Some(&(offset, line)) = self.later.get(name) {
+            if offset > span.start as usize {
+                self.error("E201", span, format!("'{name}' is used here but only created further down, on line {line}"), format!("move the statement that creates '{name}' above this line: a thing must exist before others refer to it"));
+                return None;
             }
         }
         // The hint must not suggest code to paste: in the first experiment both small models

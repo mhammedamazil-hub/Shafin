@@ -101,7 +101,9 @@ impl Ev {
         // room needed inside a vessel: (half-width, is it a ball)
         let ball = foot == Foot::Ball && scale.x == scale.y && scale.y == scale.z;
         let half_w = if ball || (foot != Foot::Other && upright && scale.x == scale.z) {
-            0.5 * b0.size().x.max(b0.size().z)
+            // round from above: turning it about the vertical does not make it wider
+            // (the bounds of the turned bounding box would say it does)
+            0.5 * (b.size().x * scale.x).max(b.size().z * scale.z)
         } else if upright {
             // a box turned about the vertical keeps the diagonal it had before turning
             let (w, d) = (b.size().x * scale.x, b.size().z * scale.z);
@@ -146,11 +148,44 @@ impl Ev {
                             let key = (ti, self.current_frame_node());
                             let others = self.contents.get(&key).cloned().unwrap_or_default();
                             // with  at: [dx, dz]  the author chose the spot; otherwise it goes where it rests lowest
-                            let spot = if at.is_some() { v.settle(&others, half_w, ball, v.centre.x + off.0, v.centre.z + off.1).map(|y| (0.0, 0.0, y)) } else { v.lowest_spot(&others, half_w, ball).map(|(x, z, y)| (x - v.centre.x, z - v.centre.z, y)) };
+                            let (x0, z0) = (v.centre.x + off.0, v.centre.z + off.1);
+                            // where it is put down: the spot the author gave, else where it would rest lowest
+                            let start = if at.is_some() { v.settle(&others, half_w, ball, x0, z0).map(|y| (x0, z0, y)) } else { v.lowest_spot(&others, half_w, ball) };
+                            let spot = match start {
+                                Some((sx, sz, _)) if ball => {
+                                    // a ball does not stay where it was put if it can roll lower, and the balls
+                                    // already there make room for it: the whole heap settles again
+                                    let fixed: Vec<Content> = others.iter().filter(|o| !(o.ball && o.node.is_some())).copied().collect();
+                                    let earlier: Vec<Content> = others.iter().filter(|o| o.ball && o.node.is_some()).copied().collect();
+                                    let mut balls: Vec<(f32, f32, f32)> = earlier.iter().map(|o| (o.c.x, o.c.z, o.r)).collect();
+                                    balls.push((sx, sz, half_w));
+                                    match v.relax(&fixed, &mut balls) {
+                                        Some(ys) => {
+                                            for (k, o) in earlier.iter().enumerate() {
+                                                let moved = vec3(balls[k].0, ys[k] + o.r, balls[k].1) - o.c;
+                                                if moved.length() > 1e-6 {
+                                                    let n = o.node.unwrap();
+                                                    self.nodes[n].local = Mat4::translate(moved).mul(&self.nodes[n].local);
+                                                    self.nodes[n].bounds = Aabb::new(self.nodes[n].bounds.min + moved, self.nodes[n].bounds.max + moved);
+                                                    if let Some(c) = self.contents.get_mut(&key).and_then(|l| l.iter_mut().find(|c| c.node == Some(n))) {
+                                                        c.c = c.c + moved;
+                                                    }
+                                                }
+                                            }
+                                            let (x, z, _) = balls[earlier.len()];
+                                            // (dx, dz) is counted from the spot `at` asks for; `at` is added again below
+                                            Some((x - x0, z - z0, ys[earlier.len()]))
+                                        }
+                                        None => None,
+                                    }
+                                }
+                                Some((sx, sz, y)) => Some((sx - x0, sz - z0, y)),
+                                None => None,
+                            };
                             if let Some((dx, dz, y)) = spot {
-                                p = vec3(v.centre.x + dx - oc.x, y + gap - b0.min.y, v.centre.z + dz - oc.z);
+                                p = vec3(x0 - off.0 + dx - oc.x, y + gap - b0.min.y, z0 - off.1 + dz - oc.z);
                                 let hh = 0.5 * b0.size().y;
-                                self.contents.entry(key).or_default().push(Content { c: vec3(v.centre.x + dx + off.0, y + gap + hh, v.centre.z + dz + off.1), r: half_w, half_h: hh, ball });
+                                self.contents.entry(key).or_default().push(Content { c: vec3(x0 + dx, y + gap + hh, z0 + dz), r: half_w, half_h: hh, ball, node: None });
                                 self.placed_inside = Some(ti);
                                 rested = true;
                             } else if let (true, None, Some(y)) = (ball, &at, v.rim_rest(half_w)) {
@@ -308,6 +343,16 @@ impl Ev {
             Value::Str(s) => match self.named_material(s) {
                 Some(i) => Some(i),
                 None => {
+                    // "darkwood", "light_stone": a shade word in front of a material is read as the material
+                    let plain = s.to_ascii_lowercase().replace(['_', '-', ' '], "");
+                    for word in ["dark", "light", "old", "new", "polished", "rough", "smooth", "shiny"] {
+                        if let Some(rest) = plain.strip_prefix(word) {
+                            if let Some(i) = self.named_material(rest) {
+                                self.warn("W341", span, format!("there is no material '{s}'; it was read as '{rest}'"), format!("write  material: {rest}  and give the shade with  color: ..."));
+                                return Some(i);
+                            }
+                        }
+                    }
                     let names: Vec<String> = self.mat_names.keys().cloned().chain(presets::preset_names().map(String::from)).collect();
                     match suggest(s, names.iter().map(|x| x.as_str())).map(String::from) {
                         Some(sg) => {
@@ -515,7 +560,32 @@ impl Ev {
             _ => {
                 let mut all: Vec<String> = OBJECT_KINDS.iter().map(|k| k.0.to_string()).chain(OTHER_KINDS.iter().map(|s| s.to_string())).collect();
                 all.extend(self.defines.keys().cloned());
-                let hint = match suggest(kind, all.iter().map(|s| s.as_str())) {
+                let near = suggest(kind, all.iter().map(|s| s.as_str())).map(String::from);
+                // `table { size: [1.4, 0.75, 0.8] }`: the kind word was left out, the word that is
+                // there is the name, and the properties say which shape was meant
+                if near.is_none() && name.is_none() {
+                    let has = |keys: &[&str]| body.iter().any(|it| matches!(it, Item::Prop { key, .. } if keys.contains(&canonical_key("box", key))));
+                    let meant = if has(&["wall"]) {
+                        Some("cup")
+                    } else if has(&["tube"]) {
+                        Some("torus")
+                    } else if has(&["top_radius"]) {
+                        Some("cone")
+                    } else if has(&["size", "width", "depth"]) {
+                        Some("box")
+                    } else if has(&["radius", "diameter"]) && has(&["height"]) {
+                        Some("cylinder")
+                    } else if has(&["radius", "diameter"]) {
+                        Some("sphere")
+                    } else {
+                        None
+                    };
+                    if let Some(k) = meant {
+                        self.warn("W351", kind_span, format!("'{kind}' is not a kind of object; the statement was read as  {k} {kind} {{ ... }}  because of its properties"), format!("write  {k} {kind} {{ ... }}"));
+                        return self.object_block(k, Some(&(kind.to_string(), kind_span)), body, span);
+                    }
+                }
+                let hint = match near {
                     Some(s) => format!("did you mean '{s}'?"),
                     None => format!("build it from simple shapes ({}) inside a  group name {{ ... }}, or declare a reusable kind with  define {kind}() {{ ... }}", OBJECT_KINDS.iter().map(|k| k.0).collect::<Vec<_>>().join(", ")),
                 };
@@ -574,7 +644,8 @@ impl Ev {
                     Some(d) => d * 0.5,
                     None => self.num(props, &["radius"], 0.04, 1e-5, big),
                 } as f32;
-                let r1 = self.num(props, &["top_radius"], r0 as f64, 1e-5, big) as f32;
+                // 0 closes the top: a hollow cone
+                let r1 = self.num(props, &["top_radius"], r0 as f64, 0.0, big) as f32;
                 let h = self.num(props, &["height"], 0.1, 1e-5, big) as f32;
                 let widest = r0.max(r1);
                 // default wall: thin enough to read as a vessel, thick enough to resolve
@@ -634,7 +705,14 @@ impl Ev {
         let known: Vec<&str> = shape_props(kind).iter().chain(COMMON_OBJECT_PROPS).chain(PLACEMENT_PROPS).copied().collect();
         self.finish(kind, props, &known);
         let is_light = matches!(self.mats[material].emission, PV::Tex(_)) || self.mats[material].emission_strength > 0.0;
-        self.add_node(SNode { name: local_name, path, kind: SKind::Shape { shape, material }, kind_name: kind.to_string(), local, parent: None, children: Vec::new(), bounds, span, hidden, cast_shadow, is_light, inside }, name);
+        let node = self.add_node(SNode { name: local_name, path, kind: SKind::Shape { shape, material }, kind_name: kind.to_string(), local, parent: None, children: Vec::new(), bounds, span, hidden, cast_shadow, is_light, inside }, name);
+        if let Some(vessel) = inside {
+            // the record made by `place` for this object is the last one without a node
+            let key = (vessel, self.current_frame_node());
+            if let Some(c) = self.contents.get_mut(&key).and_then(|l| l.last_mut()).filter(|c| c.node.is_none()) {
+                c.node = Some(node);
+            }
+        }
     }
 
     fn open_group(&mut self, kind: &str, name: Option<&(String, Span)>, span: Span) -> usize {

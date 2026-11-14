@@ -583,3 +583,92 @@ fn things_too_wide_for_a_vessel_and_vague_relations_are_explained() {
     let d = codes("plane g { }\nsphere a { radius: 1 }\nsphere b { radius: a }");
     assert!(d.iter().any(|x| x.1.contains("not an object")), "{d:?}");
 }
+
+#[test]
+fn statements_may_refer_to_things_created_further_down() {
+    // a camera written first, and "the bowl is on the table; the table is ..."
+    let c = ok(r#"
+        camera { look_at: bowl, elevation: 20 }
+        cup bowl { radius: 0.1, height: 0.08, on: table }
+        sphere fruit { radius: 0.03, in: bowl }
+        box table { size: [1, 0.7, 0.6], on: ground }
+        plane ground { }
+    "#);
+    assert_eq!(c.warning_count(), 0, "{:?}", c.diags);
+    let (bmin, _) = bounds(&c, "bowl");
+    assert!(close(bmin.y, 0.7), "the bowl stands on the table that is written after it");
+    // a program already in a usable order is evaluated exactly as written: `on: book` in a
+    // loop still means the book made the time before
+    let c = ok("plane g { }\nbox book { size: [0.2, 0.03, 0.14] }\nfor i in 0..3 { box book { size: [0.2, 0.03, 0.14], on: book } }");
+    assert!(close(bounds(&c, "book_4").0.y, 0.09));
+    // references in a circle cannot be ordered: the usual error, which says where the thing is made
+    let d = codes("box a { on: b }\nbox b { on: a }");
+    assert!(d.iter().any(|x| x.0 == "E201" && x.1.contains("only created further down, on line 2") && x.2.contains("move the statement")), "{d:?}");
+}
+
+#[test]
+fn a_statement_without_its_kind_is_read_from_its_properties() {
+    let c = ok(r#"
+        plane ground { }
+        table { size: [1.4, 0.75, 0.8], material: wood }
+        ball { radius: 0.1, on: table, color: red }
+        can { radius: 0.03, height: 0.12, on: table, at: [0.3, 0] }
+        pot { radius: 0.1, height: 0.15, wall: 0.01, on: table, at: [-0.4, 0] }
+    "#);
+    let kind = |name: &str| c.objects.iter().find(|o| o.name == name).unwrap_or_else(|| panic!("{name}")).kind.clone();
+    assert_eq!((kind("table"), kind("ball"), kind("can"), kind("pot")), ("box".to_string(), "sphere".to_string(), "cylinder".to_string(), "cup".to_string()));
+    let w: Vec<&str> = c.diags.iter().filter(|d| d.code == "W351").map(|d| d.message.as_str()).collect();
+    assert!(w.len() >= 3 && w[0].contains("box table"), "{:?}", c.diags);
+    // a misspelt kind is still a misspelling, and a word with nothing to go on is still unknown
+    let d = codes("spere { radius: 1 }");
+    assert!(d.iter().any(|x| x.0 == "E202" && x.2.contains("sphere")), "{d:?}");
+    let d = codes("unicorn { mane: long }");
+    assert!(d.iter().any(|x| x.0 == "E202"), "{d:?}");
+}
+
+#[test]
+fn shade_words_bad_hints_and_things_in_the_same_place() {
+    // "dark black", "light brown", "darkwood" have one reading each
+    let c = ok("plane g { }\nsphere a { radius: 0.1, color: dark_black }\nsphere b { radius: 0.1, color: light_brown, at: [1, 0] }\nbox c { size: 0.2, material: darkwood, at: [2, 0] }");
+    assert!(c.diags.iter().all(|d| d.code != "W340"), "{:?}", c.diags);
+    assert!(c.diags.iter().any(|d| d.code == "W341" && d.message.contains("read as 'wood'")), "{:?}", c.diags);
+    // a short name gets no far-fetched spelling suggestion, and 'table' is not 'marble'
+    for src in ["sphere s { radius: i }", "sphere s { radius: 0.1, on: table }"] {
+        let d = codes(src);
+        assert!(d.iter().any(|x| x.0 == "E201") && d.iter().all(|x| !x.2.contains("did you mean")), "{src}: {d:?}");
+    }
+    // two things of the same size in the same place: the message says which one is seen
+    let d = codes("plane g { }\nbox table { size: [1.4, 0.75, 0.8] }\nbox cloth { size: [1.4, 0.75, 0.8], color: green }");
+    assert!(d.iter().any(|x| x.0 == "W322" && x.1.contains("only 'cloth', written later, will be seen")), "{d:?}");
+    // a cup may close to a point at the top
+    ok("plane g { }\ncup hat { radius: 0.1, top_radius: 0, height: 0.2 }");
+}
+
+#[test]
+fn programs_from_the_second_experiment_behave_as_recorded() {
+    // Byte-for-byte programs written by models in experiment 2 (docs/experiments/llm-run-2.md).
+    // The compiler was changed after reading them, so this is a regression test, not a measurement.
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/llm2");
+    let check = |file: &str| {
+        let text = std::fs::read_to_string(dir.join(file)).unwrap_or_else(|e| panic!("{file}: {e}"));
+        compile(file, &text)
+    };
+    // valid when they were written, and still valid
+    for f in ["gpt-oss-20b-hosted_billiards_round0.vl", "qwen2.5-coder-1.5b_billiards_round0.vl", "qwen2.5-coder-3b_billiards_round0.vl", "qwen2.5-coder-3b_fruit-bowl_round0.vl", "qwen2.5-coder-3b_street_round0.vl", "llama3.2-3b_billiards_round2.vl", "llama3.2-3b_fruit-bowl_round0.vl", "llama3.2-3b_street_round0.vl"] {
+        let c = check(f);
+        assert!(c.scene.is_some(), "{f}: {:?}", c.diags.iter().filter(|d| d.severity == vl_core::diag::Severity::Error).collect::<Vec<_>>());
+    }
+    // rejected then, accepted now: kind words left out and a table used before it is made;
+    // a cup closing to a point
+    for f in ["qwen2.5-coder-1.5b_fruit-bowl_round0.vl", "llama3.2-3b_billiards_round0.vl"] {
+        let c = check(f);
+        assert!(c.scene.is_some(), "{f}: {:?}", c.diags.iter().filter(|d| d.severity == vl_core::diag::Severity::Error).collect::<Vec<_>>());
+    }
+    // still errors, and meant to be: invented statement forms have no single reading
+    for f in ["qwen2.5-coder-1.5b_street_round0.vl", "llama3.2-3b_fruit-bowl_round1.vl", "llama3.2-3b_street_round1.vl"] {
+        assert!(check(f).scene.is_none(), "{f} was expected to be rejected");
+    }
+    // the cloth written as a second table is what the tool says will be seen
+    let c = check("qwen2.5-coder-3b_billiards_round0.vl");
+    assert!(c.diags.iter().any(|d| d.code == "W322" && d.message.contains("only 'cloth'")), "{:?}", c.diags);
+}

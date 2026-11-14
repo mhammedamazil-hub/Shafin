@@ -1,0 +1,20 @@
+# Define the bowl
+bowl { size: [0.2, 0.03, 0.14], on: table, at: [0.35, 0.1], color: navy }
+
+# Define the oranges
+orange1 { radius: 0.04, height: 0.1, on: bowl, material: ceramic }
+orange2 { radius: 0.04, height: 0.1, on: bowl, material: ceramic }
+orange3 { radius: 0.04, height: 0.1, on: bowl, material: ceramic }
+orange4 { radius: 0.04, height: 0.1, on: bowl, material: ceramic }
+
+# Define the drinking glass
+glass { radius: 0.04, height: 0.1, on: bowl, material: glass }
+
+# Define the kitchen counter
+table { size: [1.4, 0.75, 0.8], material: wood }
+
+# Define the sunlight
+sky { sun_elevation: 40, sun_azimuth: 135 }
+
+# Define the camera
+camera { look_at: table, azimuth: 25, elevation: 20 }

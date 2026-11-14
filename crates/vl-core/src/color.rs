@@ -252,7 +252,19 @@ pub const NAMED: &[(&str, [u8; 3])] = &[
 /// `darkred` are the same colour.
 pub fn named(name: &str) -> Option<Vec3> {
     let n: String = name.chars().filter(|c| !matches!(c, '_' | '-' | ' ')).map(|c| c.to_ascii_lowercase()).collect();
-    NAMED.iter().find(|(k, _)| *k == n).map(|(_, c)| vec3(srgb8_to_linear(c[0]), srgb8_to_linear(c[1]), srgb8_to_linear(c[2])))
+    let exact = |n: &str| NAMED.iter().find(|(k, _)| *k == n).map(|(_, c)| vec3(srgb8_to_linear(c[0]), srgb8_to_linear(c[1]), srgb8_to_linear(c[2])));
+    if let Some(c) = exact(&n) {
+        return Some(c);
+    }
+    // "dark black", "light brown", "pale gold": a shade word in front of a known colour
+    for (word, toward, amount) in [("dark", 0.0f32, 0.55f32), ("deep", 0.0, 0.4), ("light", 1.0, 0.5), ("pale", 1.0, 0.65), ("bright", 0.0, 0.0), ("vivid", 0.0, 0.0), ("medium", 0.0, 0.0)] {
+        if let Some(rest) = n.strip_prefix(word) {
+            if let Some(c) = exact(rest) {
+                return Some(c + (Vec3::splat(toward) - c) * amount);
+            }
+        }
+    }
+    None
 }
 
 /// Colour of a black-body radiator at `kelvin` (1667..25000 K) as linear sRGB,

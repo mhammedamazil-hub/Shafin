@@ -153,11 +153,16 @@ fn edit_distance(a: &str, b: &str) -> usize {
 
 /// Closest candidate for a misspelt identifier ("did you mean ...").
 pub fn suggest<'a>(name: &str, candidates: impl IntoIterator<Item = &'a str>) -> Option<&'a str> {
+    // every one-letter name is one edit from every other: "unknown name 'i' - did you mean 'P'?"
+    if name.chars().count() < 3 {
+        return None;
+    }
     let lname = name.to_ascii_lowercase();
     let mut best: Option<(&str, usize)> = None;
     for c in candidates {
         let d = edit_distance(&lname, &c.to_ascii_lowercase());
-        let limit = (name.len().max(c.len()) / 3).max(1);
+        // a third of the shorter word, so that "table" does not become "marble"
+        let limit = (name.len().min(c.len()) / 3).max(1);
         let better = match best {
             Some((_, bd)) => d < bd,
             None => true,
@@ -180,8 +185,9 @@ pub fn suggest_unique<'a>(name: &str, candidates: impl IntoIterator<Item = &'a s
     let mut tie = false;
     for c in candidates {
         let d = edit_distance(&lname, &c.to_ascii_lowercase());
-        let limit = (name.len().max(c.len()) / 3).max(1).min(max_dist);
-        if d == 0 || d > limit {
+        // a third of the SHORTER word: "table" is two edits from "marble" and is not a misspelling of it
+        let limit = (name.len().min(c.len()) / 3).max(1).min(max_dist);
+        if d == 0 || d > limit || name.len() < 3 {
             continue;
         }
         match best {

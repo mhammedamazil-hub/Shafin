@@ -1,0 +1,15 @@
+plane ground { material: concrete }
+
+material green_cloth { preset: fabric, color: #008000 }
+
+box table { size: [1.2, 0.05, 0.6], material: green_cloth }
+
+sphere ball_red { radius: 0.0286, on: table, at: [-0.06, 0], color: red, material: plastic }
+sphere ball_yellow { radius: 0.0286, on: table, at: [0, 0], color: yellow, material: plastic }
+sphere ball_black { radius: 0.0286, on: table, at: [0.06, 0], color: black, material: plastic }
+
+light lamp { at: [0, 0.6, 0], power: 800, temperature: 2700 }
+
+camera { look_at: table, azimuth: 30, elevation: 20, fov: 35 }
+
+render { size: [1280, 720], samples: 64 }

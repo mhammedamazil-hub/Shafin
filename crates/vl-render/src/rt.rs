@@ -23,6 +23,9 @@ pub struct Inst {
     pub light: i32,
     /// Object-space axes ordered longest side first (for wood grain and brushed finishes).
     pub grain: [usize; 3],
+    /// Diagonal of the world-space bounds (infinite for a plane): which of two surfaces in
+    /// the same place is seen.
+    pub extent: f32,
 }
 
 impl Inst {
@@ -263,7 +266,8 @@ impl<'a> SceneRt<'a> {
             }
             let lb = o.shape.local_bounds(&scene.meshes);
             let grain = vl_ir::expr::grain_axes(if lb.is_empty() { Vec3::ONE } else { lb.size() });
-            insts.push(Inst { shape: o.shape.clone(), to_world: o.xform, to_obj, material: o.material, rand: o.rand, hidden: o.hidden, cast_shadow: o.cast_shadow, light, grain });
+            let extent = if matches!(o.shape, Shape::Plane) { f32::INFINITY } else { o.world_bounds(&scene.meshes).size().length() };
+            insts.push(Inst { shape: o.shape.clone(), to_world: o.xform, to_obj, material: o.material, rand: o.rand, hidden: o.hidden, cast_shadow: o.cast_shadow, light, grain, extent });
         }
 
         let mut bounded = Vec::new();
@@ -312,31 +316,54 @@ impl<'a> SceneRt<'a> {
         geom::intersect(&inst.shape, &self.scene.meshes, &self.mesh_rt, lo, ld, tmin, tmax)
     }
 
-    /// Closest intersection. `camera_ray` skips objects marked hidden.
-    pub fn closest(&self, o: Vec3, d: Vec3, tmin: f32, tmax: f32, camera_ray: bool) -> Option<Hit> {
-        let mut best: Option<Hit> = None;
-        let mut tmax = tmax;
-        for &i in &self.unbounded {
-            if camera_ray && self.insts[i as usize].hidden {
-                continue;
-            }
-            if let Some(h) = self.hit_inst(i, o, d, tmin, tmax) {
-                tmax = h.t;
-                best = Some(Hit { t: h.t, obj: i, local: h });
-            }
+    /// When two surfaces lie in the same place, does object `a` show rather than object `b`?
+    /// The smaller thing does (a rug on the floor, a sheet of paper on a desk); of two things
+    /// of the same size, the one written later (a cloth the size of the table it covers).
+    #[inline]
+    fn shows_over(&self, a: u32, b: u32) -> bool {
+        let (ea, eb) = (self.insts[a as usize].extent, self.insts[b as usize].extent);
+        if ea < eb * (1.0 - 1e-4) {
+            true
+        } else if eb < ea * (1.0 - 1e-4) {
+            false
+        } else {
+            a > b
         }
-        self.bvh.closest(o, d, tmin, tmax, |i, tm| {
+    }
+
+    /// Closest intersection. `camera_ray` skips objects marked hidden.
+    ///
+    /// Surfaces within `COINCIDENT` (relative) of each other along the ray count as being in
+    /// the same place, and `shows_over` decides between them. Without this rule the winner
+    /// would depend on rounding, pixel by pixel.
+    pub fn closest(&self, o: Vec3, d: Vec3, tmin: f32, tmax: f32, camera_ray: bool) -> Option<Hit> {
+        const COINCIDENT: f32 = 2e-5;
+        let mut best: Option<Hit> = None;
+        // `reach` is how far the search still has to look: the caller's limit at first, then
+        // a hair beyond the best hit, so that a surface in the same place is not skipped
+        let test = |i: u32, reach: f32, best: &mut Option<Hit>| -> f32 {
             if camera_ray && self.insts[i as usize].hidden {
-                return tm;
+                return reach;
             }
-            match self.hit_inst(i, o, d, tmin, tm) {
+            let limit = match *best {
+                None => reach,
+                // a surface that shows over the current one may lie a hair behind it; any other must be clearly in front
+                Some(b) if self.shows_over(i, b.obj) => (b.t * (1.0 + COINCIDENT)).min(tmax),
+                Some(b) => b.t * (1.0 - COINCIDENT),
+            };
+            match self.hit_inst(i, o, d, tmin, limit) {
                 Some(h) => {
-                    best = Some(Hit { t: h.t, obj: i, local: h });
-                    h.t
+                    *best = Some(Hit { t: h.t, obj: i, local: h });
+                    (h.t * (1.0 + COINCIDENT)).min(tmax)
                 }
-                None => tm,
+                None => reach,
             }
-        });
+        };
+        let mut reach = tmax;
+        for &i in &self.unbounded {
+            reach = test(i, reach, &mut best);
+        }
+        self.bvh.closest(o, d, tmin, reach, |i, r| test(i, r, &mut best));
         best
     }
 

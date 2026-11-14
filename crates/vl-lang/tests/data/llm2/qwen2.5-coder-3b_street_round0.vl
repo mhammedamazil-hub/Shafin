@@ -1,0 +1,12 @@
+plane ground { material: asphalt }
+box street_lamp { size: [0.5, 0.2, 1.5], material: plastic, at: [0, 0.5, 0], rotate: 90, color: white }
+box street_lamp { size: [0.5, 0.2, 1.5], material: plastic, at: [2, 0.5, 0], rotate: 90, color: white }
+box street_lamp { size: [0.5, 0.2, 1.5], material: plastic, at: [4, 0.5, 0], rotate: 90, color: white }
+box street_lamp { size: [0.5, 0.2, 1.5], material: plastic, at: [6, 0.5, 0], rotate: 90, color: white }
+box car { size: [0.5, 0.3, 0.5], material: dark_red, at: [3, 0.1, 0], rotate: 45 }
+box car_wheel { size: [0.1, 0.1, 0.3], material: dark_black, at: [2.5, 0.1, 0.1], rotate: 90 }
+box car_wheel { size: [0.1, 0.1, 0.3], material: dark_black, at: [2.5, 0.1, -0.1], rotate: 90 }
+box car_wheel { size: [0.1, 0.1, 0.3], material: dark_black, at: [4.5, 0.1, 0.1], rotate: 90 }
+box car_wheel { size: [0.1, 0.1, 0.3], material: dark_black, at: [4.5, 0.1, -0.1], rotate: 90 }
+camera { look_at: car, azimuth: 180, elevation: 20 }
+render { size: [1280, 720], samples: 64 }

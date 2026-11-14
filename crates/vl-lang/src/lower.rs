@@ -375,7 +375,14 @@ fn semantic_checks(ev: &mut Ev, scene: &Scene, infos: &[ObjectInfo]) {
                 let small = bi.size().min(bj.size());
                 // more than half of the smaller one in every direction: a wheel set into a car body
                 // or a handle on a mug is construction, two things on the same spot is a mistake
-                if ov.x > 0.5 * small.x.max(1e-4) && ov.y > 0.5 * small.y.max(1e-4) && ov.z > 0.5 * small.z.max(1e-4) {
+                let same = (bi.min - bj.min).abs().max_comp() < 1e-4 && (bi.max - bj.max).abs().max_comp() < 1e-4;
+                if same {
+                    // exactly one on top of the other ("a cloth the size of the table"): say which one will be seen
+                    out.push(
+                        Diag::warning("W322", ev.nodes[j].span, format!("'{}' has exactly the size and place of '{}'; only '{}', written later, will be seen", ev.nodes[j].path, ev.nodes[i].path, ev.nodes[j].path))
+                            .hint(format!("move one of them, for example  right_of: {}  - or, if '{}' is a covering, make it thin and put it  on: {}", ev.nodes[i].path, ev.nodes[j].path, ev.nodes[i].path)),
+                    );
+                } else if ov.x > 0.5 * small.x.max(1e-4) && ov.y > 0.5 * small.y.max(1e-4) && ov.z > 0.5 * small.z.max(1e-4) {
                     out.push(
                         Diag::warning("W322", ev.nodes[j].span, format!("'{}' and '{}' occupy the same space (their bounding boxes overlap by {:.2} x {:.2} x {:.2} m)", ev.nodes[i].path, ev.nodes[j].path, ov.x, ov.y, ov.z))
                             .hint(format!("move one of them, for example  right_of: {}  or  on: {}  - ignore this if one is meant to be inside the other", ev.nodes[i].path, ev.nodes[i].path)),

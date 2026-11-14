@@ -171,3 +171,70 @@ fn several_things_in_one_bowl_pile_up_without_passing_through_each_other() {
     let noise: Vec<&str> = c.diags.iter().filter(|d| d.code == "W320" || d.code == "W321" || d.code == "W322").map(|d| d.message.as_str()).collect();
     assert!(noise.is_empty(), "{noise:?}");
 }
+
+#[test]
+fn of_two_surfaces_in_the_same_place_one_is_seen_everywhere() {
+    // A cloth written as a box of the table's size (two small models did exactly this), a
+    // rug lying in the plane of the floor (the floor is declared after it, on purpose), a
+    // sheet of paper and a round mat lying on the table top.
+    let c = compiled(
+        r#"
+        rect rug { size: [3, 2], at: [4, 0, 0], color: red }
+        plane ground { }
+        box table { size: [1.4, 0.75, 0.8], material: wood }
+        box cloth { size: [1.4, 0.75, 0.8], color: green }
+        rect paper { size: [0.21, 0.3], on: table, at: [-0.4, 0], color: white }
+        disk mat { radius: 0.1, on: cloth, at: [0.4, 0.1], color: black }
+    "#,
+    );
+    let scene = c.scene.as_ref().unwrap();
+    let rt = SceneRt::build(scene);
+    let id = |name: &str| c.objects.iter().find(|o| o.name == name).unwrap().scene_index.unwrap() as u32;
+    let mut r = Rng::new(21, 0);
+    // rays from many directions onto points of each surface
+    let mut check = |name: &str, cx: f32, cy: f32, cz: f32, hx: f32, hz: f32| {
+        for _ in 0..4000 {
+            let p = vec3(cx + (2.0 * r.f32() - 1.0) * hx, cy, cz + (2.0 * r.f32() - 1.0) * hz);
+            let from = p + vec3(4.0 * r.f32() - 2.0, 0.3 + 3.0 * r.f32(), 4.0 * r.f32() - 2.0);
+            let hit = rt.closest(from, p - from, 0.0, f32::MAX, true).expect("the ray is aimed at a surface");
+            assert_eq!(hit.obj, id(name), "looking at '{name}' at {p:?} from {from:?}: saw '{}'", scene.objects[hit.obj as usize].name);
+        }
+    };
+    check("cloth", 0.0, 0.75, -0.29, 0.65, 0.09); // the table top, away from the paper and the mat
+    check("paper", -0.4, 0.75, 0.0, 0.1, 0.14);
+    check("mat", 0.4, 0.75, 0.1, 0.06, 0.06);
+    check("rug", 4.0, 0.0, 0.0, 1.45, 0.95);
+}
+
+#[test]
+fn balls_given_nearly_the_same_spot_roll_apart_instead_of_balancing_in_a_tower() {
+    // Written by the hosted model in experiment 3 (docs/experiments/llm-run-2.md): four
+    // oranges, each 16 cm across, "at" spots 4 cm apart. Taking the spots literally stood
+    // them on top of one another, half a metre high.
+    let c = compiled(
+        r#"
+        plane ground { }
+        box counter { size: [2, 0.75, 1], on: ground }
+        cup bowl { radius: 0.15, top_radius: 0.18, height: 0.1, wall: 0.01, on: counter, at: [0.3, 0] }
+        sphere orange1 { radius: 0.08, in: bowl, at: [0.02, 0.02] }
+        sphere orange2 { radius: 0.08, in: bowl, at: [-0.02, 0.02] }
+        sphere orange3 { radius: 0.08, in: bowl, at: [0.02, -0.02] }
+        sphere orange4 { radius: 0.08, in: bowl, at: [-0.02, -0.02] }
+    "#,
+    );
+    let scene = c.scene.as_ref().unwrap();
+    let rt = SceneRt::build(scene);
+    let bowl = c.objects.iter().find(|o| o.name == "bowl").unwrap();
+    let mut on_floor = 0;
+    for o in c.objects.iter().filter(|o| o.name.starts_with("orange")) {
+        let centre = (o.bounds.min + o.bounds.max) * 0.5;
+        let gap = clearance(&rt, centre, o.scene_index.unwrap() as u32, 13) - 0.08;
+        assert!(gap > -3e-4 && gap < 5e-4, "{}: {:.2} mm from what it rests on", o.name, gap * 1000.0);
+        // Nothing towers. Four 16 cm oranges cannot all lie in a bowl 10 cm deep and 33 cm wide:
+        // the heap must rise a little above the rim, but only a little (the literal reading
+        // put the fourth one 40 cm above it).
+        assert!(o.bounds.min.y < bowl.bounds.max.y + 0.06, "{} sits high above the rim of the bowl: underside at {}", o.name, o.bounds.min.y);
+        on_floor += (o.bounds.min.y < bowl.bounds.min.y + 0.05) as usize;
+    }
+    assert!(on_floor >= 2, "only {on_floor} oranges are at the bottom of the bowl");
+}
