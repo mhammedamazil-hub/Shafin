@@ -1,0 +1,88 @@
+{
+  "schema": "vl-toolchain-bundle/1",
+  "rust_version": "1.100.0 (0ef1bc386 2026-11-09)",
+  "manifest_date": "2026-11-12",
+  "channel": "stable",
+  "host": "x86_64-unknown-linux-gnu",
+  "files": [
+    {
+      "pkg": "rustc",
+      "target": "x86_64-unknown-linux-gnu",
+      "name": "rustc-1.100.0-x86_64-unknown-linux-gnu.tar.xz",
+      "url": "https://static.rust-lang.org/dist/2026-11-12/rustc-1.100.0-x86_64-unknown-linux-gnu.tar.xz",
+      "sha256": "f1d0b1dec81dab6f523cd098507763487b0d4bd7fd2c87582f154128719be03b",
+      "size": 84955936,
+      "parts": [
+        "rustc-1.100.0-x86_64-unknown-linux-gnu.tar.xz.part00",
+        "rustc-1.100.0-x86_64-unknown-linux-gnu.tar.xz.part01"
+      ]
+    },
+    {
+      "pkg": "cargo",
+      "target": "x86_64-unknown-linux-gnu",
+      "name": "cargo-1.100.0-x86_64-unknown-linux-gnu.tar.xz",
+      "url": "https://static.rust-lang.org/dist/2026-11-12/cargo-1.100.0-x86_64-unknown-linux-gnu.tar.xz",
+      "sha256": "7e29ce07d7c6e92d1826870575ba27d57fff6cb3e754aa57d99099cb88fab35d",
+      "size": 10946408,
+      "parts": [
+        "cargo-1.100.0-x86_64-unknown-linux-gnu.tar.xz.part00"
+      ]
+    },
+    {
+      "pkg": "rust-std",
+      "target": "x86_64-unknown-linux-gnu",
+      "name": "rust-std-1.100.0-x86_64-unknown-linux-gnu.tar.xz",
+      "url": "https://static.rust-lang.org/dist/2026-11-12/rust-std-1.100.0-x86_64-unknown-linux-gnu.tar.xz",
+      "sha256": "4591b6486594ded52ecd6135db95bf9355bbd3ca7a380888b141528bbcf9a5d4",
+      "size": 31283108,
+      "parts": [
+        "rust-std-1.100.0-x86_64-unknown-linux-gnu.tar.xz.part00"
+      ]
+    },
+    {
+      "pkg": "clippy-preview",
+      "target": "x86_64-unknown-linux-gnu",
+      "name": "clippy-1.100.0-x86_64-unknown-linux-gnu.tar.xz",
+      "url": "https://static.rust-lang.org/dist/2026-11-12/clippy-1.100.0-x86_64-unknown-linux-gnu.tar.xz",
+      "sha256": "0d18df3bff6c852ef8243727fed075ecb33dbf93b8ab8c138c2f45e3f270102a",
+      "size": 5353304,
+      "parts": [
+        "clippy-1.100.0-x86_64-unknown-linux-gnu.tar.xz.part00"
+      ]
+    },
+    {
+      "pkg": "rustfmt-preview",
+      "target": "x86_64-unknown-linux-gnu",
+      "name": "rustfmt-1.100.0-x86_64-unknown-linux-gnu.tar.xz",
+      "url": "https://static.rust-lang.org/dist/2026-11-12/rustfmt-1.100.0-x86_64-unknown-linux-gnu.tar.xz",
+      "sha256": "4c9389e4722b16499e5d47d89837ec84a4ef755f105ed2a84c038156064e01ab",
+      "size": 2524496,
+      "parts": [
+        "rustfmt-1.100.0-x86_64-unknown-linux-gnu.tar.xz.part00"
+      ]
+    },
+    {
+      "pkg": "rust-std",
+      "target": "x86_64-unknown-linux-musl",
+      "name": "rust-std-1.100.0-x86_64-unknown-linux-musl.tar.xz",
+      "url": "https://static.rust-lang.org/dist/2026-11-12/rust-std-1.100.0-x86_64-unknown-linux-musl.tar.xz",
+      "sha256": "9d5211bc7b40195f9700a6f9133831832a32f50d0e2a2c0ae8af801e7656de5c",
+      "size": 41027908,
+      "parts": [
+        "rust-std-1.100.0-x86_64-unknown-linux-musl.tar.xz.part00"
+      ]
+    },
+    {
+      "pkg": "rust-std",
+      "target": "wasm32-wasip1",
+      "name": "rust-std-1.100.0-wasm32-wasip1.tar.xz",
+      "url": "https://static.rust-lang.org/dist/2026-11-12/rust-std-1.100.0-wasm32-wasip1.tar.xz",
+      "sha256": "7a506aa6fcc8ed4308780fc412ba5713eb1c97bf5b1e940eaa2cf1f70299c777",
+      "size": 24463072,
+      "parts": [
+        "rust-std-1.100.0-wasm32-wasip1.tar.xz.part00"
+      ]
+    }
+  ],
+  "total_bytes": 200554232
+}
