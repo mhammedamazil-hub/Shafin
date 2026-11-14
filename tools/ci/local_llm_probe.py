@@ -107,13 +107,38 @@ def main():
     for ep in req.get("keyless_endpoints", []):
         status, text, secs = post(ep["url"], {"model": ep.get("model", "openai"), "max_tokens": 20,
                                               "messages": [{"role": "user", "content": "Reply with the single word: ok"}]}, timeout=90)
-        result["keyless_hosted"].append({"url": ep["url"], "model": ep.get("model"), "status": status, "seconds": secs, "body_head": text[:500]})
+        item = {"url": ep["url"], "model": ep.get("model"), "status": status, "seconds": secs, "body_head": text[:500]}
         print(f"keyless {ep['url']}: {status} {text[:120]!r}", flush=True)
+        # a request of realistic size (long system prompt, a few hundred output tokens)
+        status, text, secs = post(ep["url"], {"model": ep.get("model", "openai"), "max_tokens": 400, "temperature": 0, "seed": 1,
+                                              "messages": [{"role": "system", "content": PROMPT_PAD}, {"role": "user", "content": QUESTION}]}, timeout=180)
+        item.update({"long_status": status, "long_seconds": secs, "long_body_head": text[:1200]})
+        print(f"keyless long {ep['url']}: {status} in {secs}s", flush=True)
+        result["keyless_hosted"].append(item)
+    result["keyless_model_lists"] = []
+    for url in req.get("keyless_model_lists", []):
+        t0 = time.time()
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "vl-probe"}), timeout=60) as r:
+                status, text = r.status, r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            status, text = e.code, e.read().decode("utf-8", "replace")
+        except Exception as e:  # noqa: BLE001
+            status, text = 0, f"{type(e).__name__}: {e}"
+        result["keyless_model_lists"].append({"url": url, "status": status, "seconds": round(time.time() - t0, 2), "body_head": text[:6000]})
+        print(f"model list {url}: {status} ({len(text)} bytes)", flush=True)
 
     rc, out, _ = sh("nproc; free -m | head -2; df -h / | tail -1; lscpu | grep -E 'Model name|Flags' | cut -c1-400")
     result["runner"] = out
+    working = [m["tag"] for m in result["models"] if m.get("chat_status") == 200]
+    result["working_local_models"] = working
     json.dump(result, open(os.path.join(out_dir, "local_llm_probe.json"), "w"), indent=1)
+    if req.get("ollama_models") and not working:
+        print("FAIL: no local model answered a chat request", flush=True)
+        return 2
+    print(f"OK: {len(working)} of {len(req.get('ollama_models', []))} local models answered", flush=True)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

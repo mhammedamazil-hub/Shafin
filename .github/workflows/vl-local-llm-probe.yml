@@ -1,6 +1,12 @@
 # Research plumbing: measures which open-weight text LLMs a GitHub-hosted CPU
 # runner can serve locally with Ollama (no accounts, no API keys), and how fast.
 # Runs only when .github/vl-requests/local-llm-probe.json changes.
+#
+# Cost note: this repository is private, so every run spends Actions minutes.
+# The job is capped at 35 minutes and the model list is kept short on purpose.
+#
+# The development sandbox cannot download Actions logs, so every diagnostic the
+# job produces is written to $OUT and published to refs/vl-results/local-llm-probe.
 name: vl-local-llm-probe
 
 on:
@@ -18,20 +24,49 @@ concurrency:
 jobs:
   probe:
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    timeout-minutes: 35
+    env:
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_KEEP_ALIVE: "10m"
     steps:
       - uses: actions/checkout@v4
-      - name: Install Ollama
+      - name: Prepare output directory
         run: |
-          set -euo pipefail
-          curl -fsSL https://ollama.com/install.sh | sh
-          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:11434/api/version && break || sleep 1; done
-      - name: Probe
+          mkdir -p "$RUNNER_TEMP/out"
+          echo "OUT=$RUNNER_TEMP/out" >> "$GITHUB_ENV"
+      - name: Install Ollama
+        id: install
+        run: |
+          set -uo pipefail
+          curl -fsSL https://ollama.com/install.sh -o "$OUT/install.sh"
+          sh "$OUT/install.sh" > "$OUT/install.log" 2>&1
+          rc=$?
+          rm -f "$OUT/install.sh"
+          echo "install exit code: $rc" >> "$OUT/install.log"
+          command -v ollama >> "$OUT/install.log" 2>&1
+          exit $rc
+      - name: Start server and probe
         id: probe
         run: |
           set -uo pipefail
-          mkdir -p "$RUNNER_TEMP/out"
-          python3 tools/ci/local_llm_probe.py .github/vl-requests/local-llm-probe.json "$RUNNER_TEMP/out" 2>&1 | tee "$RUNNER_TEMP/out/probe.log"
+          up() { curl -fsS --max-time 3 http://127.0.0.1:11434/api/version > "$OUT/version.json" 2>/dev/null; }
+          started_by="installer service"
+          ok=0
+          for i in $(seq 1 8); do if up; then ok=1; break; fi; sleep 1; done
+          if [ "$ok" != 1 ]; then
+            # The installer did not leave a running server (observed on run 43581446661).
+            started_by="explicit 'ollama serve'"
+            { systemctl status ollama --no-pager 2>&1 | head -30; journalctl -u ollama -n 40 --no-pager 2>&1; } > "$OUT/service-diag.txt" || true
+            nohup ollama serve > "$OUT/serve.log" 2>&1 &
+            for i in $(seq 1 60); do if up; then ok=1; break; fi; sleep 1; done
+          fi
+          echo "server up: $ok (started by: $started_by)" | tee "$OUT/server.txt"
+          if [ "$ok" != 1 ]; then
+            echo "FATAL: Ollama server did not come up" | tee -a "$OUT/server.txt"
+            exit 1
+          fi
+          python3 tools/ci/local_llm_probe.py .github/vl-requests/local-llm-probe.json "$OUT" 2>&1 | tee "$OUT/probe.log"
+          exit "${PIPESTATUS[0]}"
       - name: Publish to refs/vl-results/local-llm-probe
         if: always()
         env:
@@ -39,7 +74,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/out" && cd "$RUNNER_TEMP/out"
-          printf '{"run_id":"%s","source_sha":"%s","outcome":"%s"}\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "${{ steps.probe.outcome }}" > status.json
+          printf '{"run_id":"%s","source_sha":"%s","install":"%s","probe":"%s"}\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "${{ steps.install.outcome }}" "${{ steps.probe.outcome }}" > status.json
+          # keep published logs small
+          for f in install.log serve.log service-diag.txt; do [ -f "$f" ] && tail -c 60000 "$f" > "$f.tmp" && mv "$f.tmp" "$f"; done
           git init -q .
           git config user.name "vl-bot"
           git config user.email "vl-bot@users.noreply.github.com"
