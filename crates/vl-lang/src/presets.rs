@@ -168,26 +168,32 @@ pub fn preset(name: &str, tint: Option<Vec3>) -> Option<MatSpec> {
             // contrast varies, and fine fibre streaks and pores sit on top. Every object gets a
             // different piece of wood (offset by RAND).
             let tone = tint.unwrap_or(srgb(0.55, 0.36, 0.2));
-            let (dark, light) = (tone * 0.62, (tone * 1.12).clamp(0.0, 1.0));
+            let (dark, light) = (tone * 0.66, (tone * 1.1).clamp(0.0, 1.0));
             let g = add(Rc::new(Node::Input(INPUT_GRAIN)), mul(Rc::new(Node::Input(INPUT_RAND)), n(7.0)));
-            let along = op(Op::GetX, vec![g.clone()]);
             let u = op(Op::GetY, vec![g.clone()]);
             let v = op(Op::GetZ, vec![g.clone()]);
-            // slow wander of the rings along the board
-            let slow = mul(g.clone(), c(vec3(0.9, 2.5, 2.5)));
-            let wander = mul(op(Op::Sub, vec![fbm(slow.clone(), 3.0, 11.0), n(0.5)]), n(0.16));
-            let du = add(u.clone(), n(0.23));
-            let dv = add(mul(v.clone(), n(0.55)), n(0.61));
-            let radial = op(Op::Sqrt, vec![add(mul(du.clone(), du), mul(dv.clone(), dv))]);
-            let rings = op(Op::Fract, vec![mul(add(radial, wander), n(46.0))]);
-            // soft rise through the early wood, sharp fall at the late-wood line
-            let band = mul(smooth(0.0, 0.7, rings.clone()), op(Op::Sub, vec![n(1.0), smooth(0.82, 1.0, rings)]));
-            let strength = add(n(0.45), mul(fbm(mul(g.clone(), c(vec3(0.5, 6.0, 6.0))), 2.0, 5.0), n(0.55)));
-            let fibre = fbm(mul(g.clone(), c(vec3(6.0, 420.0, 420.0))), 3.0, 3.0);
+            // slow wander of the rings along the board, plus a finer wobble so no two lines are parallel
+            let wander = mul(op(Op::Sub, vec![fbm(mul(g.clone(), c(vec3(0.9, 2.5, 2.5))), 3.0, 11.0), n(0.5)]), n(0.14));
+            let wobble = mul(op(Op::Sub, vec![fbm(mul(g.clone(), c(vec3(5.0, 40.0, 40.0))), 2.0, 12.0), n(0.5)]), n(0.006));
+            let du = add(u, n(0.23));
+            let dv = add(mul(v, n(0.55)), n(0.61));
+            let radial = add(op(Op::Sqrt, vec![add(mul(du.clone(), du), mul(dv.clone(), dv))]), add(wander, wobble));
+            // growth rings a few millimetres apart: soft rise through early wood, sharp late-wood line
+            let rings = op(Op::Fract, vec![mul(radial.clone(), n(150.0))]);
+            let band = mul(smooth(0.0, 0.65, rings.clone()), op(Op::Sub, vec![n(1.0), smooth(0.8, 1.0, rings)]));
+            // ring contrast comes and goes along the board; broad darker and lighter zones on top
+            let strength = add(n(0.35), mul(fbm(mul(g.clone(), c(vec3(0.6, 7.0, 7.0))), 2.0, 5.0), n(0.65)));
+            let zones = fbm(mul(radial, n(9.0)), 2.0, 19.0);
+            // fibres: long thin streaks; pores: short dark dashes
+            let fibre = fbm(mul(g.clone(), c(vec3(5.0, 520.0, 520.0))), 3.0, 3.0);
+            let pores = smooth(0.66, 0.8, op(Op::Noise, vec![mul(g.clone(), c(vec3(45.0, 900.0, 900.0))), n(29.0)]));
             let blotch = fbm(mul(g.clone(), c(vec3(1.2, 9.0, 9.0))), 3.0, 17.0);
-            let t = op(Op::Saturate, vec![add(add(mul(mul(band, strength), n(0.55)), mul(fibre.clone(), n(0.3))), mul(blotch, n(0.3)))]);
-            let _ = along;
-            MatSpec { base: PV::Tex(mix(c(dark), c(light), t.clone())), roughness: PV::Tex(mix(n(0.5), n(0.36), t)), bump: Some(mul(fibre, n(0.00012))), ..base }
+            let t = op(
+                Op::Saturate,
+                vec![op(Op::Sub, vec![add(add(add(mul(mul(band, strength), n(0.42)), mul(fibre.clone(), n(0.34))), mul(zones, n(0.22))), mul(blotch, n(0.22))), mul(pores.clone(), n(0.3))])],
+            );
+            let height = op(Op::Sub, vec![mul(fibre, n(0.00012)), mul(pores, n(0.00008))]);
+            MatSpec { base: PV::Tex(mix(c(dark), c(light), t.clone())), roughness: PV::Tex(mix(n(0.48), n(0.4), t)), bump: Some(height), ..base }
         }
         "marble" => {
             let tone = tint.unwrap_or(srgb(0.93, 0.92, 0.9));
