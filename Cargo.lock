@@ -35,6 +35,7 @@ name = "vl-lang"
 version = "0.1.0"
 dependencies = [
  "vl-core",
+ "vl-ir",
 ]
 
 [[package]]

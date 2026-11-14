@@ -125,17 +125,30 @@ pub fn has_errors(diags: &[Diag]) -> bool {
     diags.iter().any(|d| d.severity == Severity::Error)
 }
 
-fn levenshtein(a: &str, b: &str) -> usize {
+/// Edit distance in which swapping two adjacent letters counts as ONE edit
+/// (optimal string alignment). Transpositions are the commonest typing slip:
+/// "tabel" must be one step from "table", not two.
+fn edit_distance(a: &str, b: &str) -> usize {
     let (a, b): (Vec<char>, Vec<char>) = (a.chars().collect(), b.chars().collect());
-    let mut prev: Vec<usize> = (0..=b.len()).collect();
-    for (i, ca) in a.iter().enumerate() {
-        let mut cur = vec![i + 1];
-        for (j, cb) in b.iter().enumerate() {
-            cur.push((prev[j] + usize::from(ca != cb)).min(prev[j + 1] + 1).min(cur[j] + 1));
-        }
-        prev = cur;
+    let (n, m) = (a.len(), b.len());
+    let mut d = vec![vec![0usize; m + 1]; n + 1];
+    for (i, row) in d.iter_mut().enumerate() {
+        row[0] = i;
     }
-    prev[b.len()]
+    for j in 0..=m {
+        d[0][j] = j;
+    }
+    for i in 1..=n {
+        for j in 1..=m {
+            let cost = usize::from(a[i - 1] != b[j - 1]);
+            let mut v = (d[i - 1][j] + 1).min(d[i][j - 1] + 1).min(d[i - 1][j - 1] + cost);
+            if i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1] {
+                v = v.min(d[i - 2][j - 2] + 1);
+            }
+            d[i][j] = v;
+        }
+    }
+    d[n][m]
 }
 
 /// Closest candidate for a misspelt identifier ("did you mean ...").
@@ -143,13 +156,13 @@ pub fn suggest<'a>(name: &str, candidates: impl IntoIterator<Item = &'a str>) ->
     let lname = name.to_ascii_lowercase();
     let mut best: Option<(&str, usize)> = None;
     for c in candidates {
-        let d = levenshtein(&lname, &c.to_ascii_lowercase());
+        let d = edit_distance(&lname, &c.to_ascii_lowercase());
         let limit = (name.len().max(c.len()) / 3).max(1);
         let better = match best {
             Some((_, bd)) => d < bd,
             None => true,
         };
-        if d <= limit && better {
+        if d <= limit && better && d > 0 {
             best = Some((c, d));
         }
     }
@@ -185,5 +198,16 @@ mod tests {
         assert!(txt.contains("t.vl:1:10") && txt.contains("^^^^^^^") && txt.contains("hint"));
         let j = to_json(&[d], &s);
         assert_eq!(j.as_arr().unwrap()[0].get("col").unwrap().as_f64(), Some(10.0));
+    }
+
+    #[test]
+    fn suggestions_handle_transpositions_and_never_echo_the_input() {
+        assert_eq!(edit_distance("tabel", "table"), 1);
+        assert_eq!(edit_distance("raduis", "radius"), 1);
+        assert_eq!(edit_distance("kitten", "sitting"), 3);
+        assert_eq!(edit_distance("", "abc"), 3);
+        assert_eq!(suggest("tabel", ["chair", "table", "lamp"]), Some("table"));
+        assert_eq!(suggest("size", ["size", "width"]), None, "an exact match is not a suggestion");
+        assert_eq!(suggest("xyzzy", ["chair", "table"]), None);
     }
 }

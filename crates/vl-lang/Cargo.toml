@@ -6,3 +6,4 @@ license.workspace = true
 
 [dependencies]
 vl-core = { path = "../vl-core" }
+vl-ir = { path = "../vl-ir" }
