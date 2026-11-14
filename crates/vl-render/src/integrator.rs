@@ -4,6 +4,11 @@
 //! Known, deliberate approximations (documented for users in docs/architecture.md):
 //! * light reaching a surface THROUGH glass is computed with straight, attenuated
 //!   shadow rays ("transparent shadows"); refractive caustics are not simulated;
+//! * light reaching a diffuse surface by MIRROR reflection off another object is dropped
+//!   unless `Film::reflective_caustics` is set (it would appear as speckles, not a caustic);
+//! * after a path has scattered diffusely, glossy and mirror surfaces it meets later are
+//!   treated as rougher (path regularisation), so reflections seen indirectly are blurrier
+//!   than reality but can be lit by direct light sampling instead of by luck;
 //! * indirect contributions are clamped (`Film::clamp_indirect`) to suppress fireflies,
 //!   which removes a small amount of energy from very bright indirect paths;
 //! * the sky dome is found by BSDF sampling only; the sun and emissive spheres,
@@ -201,15 +206,23 @@ pub struct PathResult {
 }
 
 /// Radiance arriving at `o` from direction `d` (unit vector pointing away from `o`).
+/// Largest GGX alpha that path regularisation will impose (roughness 0.5). Measured on the
+/// development scene at 64 spp: a floor of 0.09 left 701 speckle pixels, 0.25 leaves 64, with
+/// the mean image energy unchanged to 0.05%.
+const REGULARISE_MAX_ALPHA: f32 = 0.25;
+
 pub fn radiance(rt: &SceneRt, mut o: Vec3, mut d: Vec3, rng: &mut Rng, scratch: &mut Scratch, max_depth: u32, clamp: f32) -> PathResult {
     let mut out = PathResult { l: Vec3::ZERO, albedo: Vec3::ONE, normal: Vec3::ZERO, depth: 0.0, rays: 0 };
+    let caustics = rt.scene.film.reflective_caustics;
     let mut beta = Vec3::ONE;
     let mut prev_delta = true;
     let mut prev_pdf = 0.0f32;
     let mut prev_p = o;
-    // has the path scattered diffusely yet, and has it since then only passed through clear glass?
+    // Has the path scattered non-specularly yet? Since then, has it passed through clear glass?
     let mut diffuse_seen = false;
     let mut via_transmission = false;
+    // Angular spread (radians, capped at 1) of the widest non-specular bounce so far.
+    let mut blur = 0.0f32;
 
     for depth in 0..max_depth {
         out.rays += 1;
@@ -234,7 +247,7 @@ pub fn radiance(rt: &SceneRt, mut o: Vec3, mut d: Vec3, rng: &mut Rng, scratch: 
                 if let Some(sky) = &rt.sky {
                     // the sun is sampled as a light; a path that reached it through glass after a
                     // diffuse bounce is already covered by the transparent-shadow estimate
-                    if sky.in_sun(d) && !(diffuse_seen && via_transmission) {
+                    if sky.in_sun(d) && !(diffuse_seen && (via_transmission || (prev_delta && !caustics))) {
                         let w = if prev_delta { 1.0 } else { power_heuristic(prev_pdf, rt.sun_pdf(prev_p)) };
                         add(&mut out.l, beta * sky.sun_radiance * w);
                     }
@@ -242,11 +255,25 @@ pub fn radiance(rt: &SceneRt, mut o: Vec3, mut d: Vec3, rng: &mut Rng, scratch: 
                 break;
             }
         };
-        let s = rt.shade(o, d, &hit, scratch);
+        let mut s = rt.shade(o, d, &hit, scratch);
         if depth == 0 {
             out.albedo = s.bsdf.base;
             out.normal = s.ns;
             out.depth = hit.t;
+        }
+        if blur > 0.0 && s.bsdf.trans < 0.5 {
+            // path regularisation: a surface reached after a blurry bounce is made at least
+            // proportionally rough, so a mirror seen from a diffuse surface can be lit by
+            // direct light sampling (a blurred caustic) instead of by chance (fireflies)
+            let floor = (0.3 * blur).min(REGULARISE_MAX_ALPHA);
+            if s.bsdf.spec_delta || s.bsdf.alpha < floor {
+                s.bsdf.alpha = s.bsdf.alpha.max(floor);
+                s.bsdf.spec_delta = false;
+            }
+            if s.bsdf.coat > 0.0 && (s.bsdf.coat_delta || s.bsdf.coat_alpha < floor) {
+                s.bsdf.coat_alpha = s.bsdf.coat_alpha.max(floor);
+                s.bsdf.coat_delta = false;
+            }
         }
         if !s.front {
             beta = beta * rt.absorption(s.material, hit.t);
@@ -256,7 +283,7 @@ pub fn radiance(rt: &SceneRt, mut o: Vec3, mut d: Vec3, rng: &mut Rng, scratch: 
             let flat = matches!(inst.shape, Shape::Rect { .. } | Shape::Disk { .. } | Shape::Plane);
             if s.front || flat {
                 if inst.light >= 0 {
-                    if !(diffuse_seen && via_transmission) {
+                    if !(diffuse_seen && (via_transmission || (prev_delta && !caustics))) {
                         let w = if prev_delta { 1.0 } else { power_heuristic(prev_pdf, rt.light_pdf(inst.light as usize, prev_p, d, hit.t, s.ng)) };
                         add(&mut out.l, beta * s.emission * w);
                     }
@@ -324,6 +351,8 @@ pub fn radiance(rt: &SceneRt, mut o: Vec3, mut d: Vec3, rng: &mut Rng, scratch: 
         } else {
             diffuse_seen = true;
             via_transmission = false;
+            // a lobe of density p covers about 1/p steradians: angular radius ~ sqrt(1 / (pi p))
+            blur = blur.max((dmath::INV_PI32 / smp.pdf.max(1e-6)).sqrt().min(1.0));
         }
         prev_delta = smp.delta;
         prev_pdf = smp.pdf;
@@ -357,18 +386,40 @@ pub struct Region {
     pub y1: usize,
 }
 
+/// Overrides for the film settings stored in the scene (used for previews and pre-passes).
+#[derive(Clone, Copy, Debug, Default)]
+pub struct FilmOverride {
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub spp: Option<u32>,
+    pub max_depth: Option<u32>,
+}
+
 pub struct RenderOpts<'a> {
     pub threads: usize,
     pub region: Option<Region>,
     /// Luminance limit (nits) for indirect contributions; 0 disables clamping.
     pub clamp: f32,
+    pub film: FilmOverride,
     pub progress: Option<&'a (dyn Fn(f32) + Sync)>,
 }
 
 impl Default for RenderOpts<'_> {
     fn default() -> Self {
-        RenderOpts { threads: par::available_threads(), region: None, clamp: 0.0, progress: None }
+        RenderOpts { threads: par::available_threads(), region: None, clamp: 0.0, film: FilmOverride::default(), progress: None }
     }
+}
+
+/// Film settings in effect for one render call.
+#[derive(Clone, Copy, Debug)]
+struct FilmRt {
+    w: usize,
+    h: usize,
+    spp: u32,
+    min_spp: u32,
+    noise_target: f32,
+    max_depth: u32,
+    seed: u64,
 }
 
 /// Scene-referred render result (radiance in nits) plus the feature buffers used
@@ -409,9 +460,8 @@ struct Px {
     bad: u32,
 }
 
-fn render_pixel(rt: &SceneRt, x: usize, y: usize, scratch: &mut Scratch, clamp: f32) -> Px {
-    let film = &rt.scene.film;
-    let (w, h) = (film.width as usize, film.height as usize);
+fn render_pixel(rt: &SceneRt, film: &FilmRt, x: usize, y: usize, scratch: &mut Scratch, clamp: f32) -> Px {
+    let (w, h) = (film.w, film.h);
     let pix = (y * w + x) as u64;
     let spp = film.spp.max(1);
     let min_spp = film.min_spp.clamp(1, spp);
@@ -457,8 +507,18 @@ const BAND: usize = 8;
 /// Render the scene's film (or a region of it). The result does not depend on the
 /// number of threads, and a region render reproduces the same pixels as a full render.
 pub fn render(rt: &SceneRt, opts: &RenderOpts) -> Frame {
-    let film = &rt.scene.film;
-    let (w, h) = (film.width as usize, film.height as usize);
+    let sf = &rt.scene.film;
+    let film = FilmRt {
+        w: opts.film.width.unwrap_or(sf.width).max(1) as usize,
+        h: opts.film.height.unwrap_or(sf.height).max(1) as usize,
+        spp: opts.film.spp.unwrap_or(sf.spp),
+        min_spp: sf.min_spp,
+        noise_target: sf.noise_target,
+        max_depth: opts.film.max_depth.unwrap_or(sf.max_depth),
+        seed: sf.seed,
+    };
+    let film = &film;
+    let (w, h) = (film.w, film.h);
     let region = opts.region.unwrap_or(Region { x0: 0, y0: 0, x1: w, y1: h });
     let region = Region { x0: region.x0.min(w), y0: region.y0.min(h), x1: region.x1.min(w), y1: region.y1.min(h) };
     let n = w * h;
@@ -492,7 +552,7 @@ pub fn render(rt: &SceneRt, opts: &RenderOpts) -> Frame {
             let mut out = Vec::with_capacity((y1 - y0) * (region.x1 - region.x0));
             for y in y0..y1 {
                 for x in region.x0..region.x1 {
-                    out.push(render_pixel(rt, x, y, &mut scratch, opts.clamp));
+                    out.push(render_pixel(rt, film, x, y, &mut scratch, opts.clamp));
                 }
             }
             out

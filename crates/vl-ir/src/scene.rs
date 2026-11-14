@@ -25,14 +25,18 @@ pub struct Film {
     pub noise_target: f32,
     pub max_depth: u32,
     pub seed: u64,
-    /// Upper bound on the luminance (nits, pre-exposure, relative to the exposure white point)
-    /// of indirect contributions; suppresses fireflies. 0 disables.
+    /// Upper bound on any single indirect contribution, in multiples of the exposure white
+    /// point; suppresses fireflies at the cost of a little energy. 0 disables.
     pub clamp_indirect: f32,
+    /// Let light that reaches a diffuse surface by mirror reflection off another object
+    /// (a "reflective caustic") be found by chance. Off by default: a path tracer finds such
+    /// paths so rarely that they show up as bright speckles rather than as the caustic.
+    pub reflective_caustics: bool,
 }
 
 impl Default for Film {
     fn default() -> Film {
-        Film { width: 1280, height: 720, spp: 64, min_spp: 16, noise_target: 0.0, max_depth: 12, seed: 1, clamp_indirect: 20.0 }
+        Film { width: 1280, height: 720, spp: 64, min_spp: 16, noise_target: 0.0, max_depth: 12, seed: 1, clamp_indirect: 4.0, reflective_caustics: false }
     }
 }
 
