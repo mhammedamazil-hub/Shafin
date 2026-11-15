@@ -1,0 +1,634 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:vl:protocol:0.1-draft",
+  "title": "VL Protocol 0.1 - draft for review",
+  "description": "Request and response schemas proposed in docs/design/01-universal-interface.md. Nothing in this file is implemented. Requests are flat (no nested objects in params) so that the arguments of a model's tool call are the protocol parameters, unchanged. Clients must ignore response members they do not know. Servers reject request members they do not know, except members whose name starts with 'x_'.",
+
+  "$defs": {
+
+    "ProtocolVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "Operation": { "enum": ["capabilities", "reference", "check", "render", "job", "view", "measure"] },
+    "ImageId": { "type": "string", "pattern": "^img_[0-9a-f]{32}$" },
+    "JobId": { "type": "string", "pattern": "^job_[0-9a-f]{32}$" },
+    "Sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "Fraction": { "type": "number", "minimum": 0, "maximum": 1 },
+    "Quality": {
+      "description": "A named size-and-samples rule. 'final' uses exactly what the program's render block says.",
+      "enum": ["draft", "preview", "standard", "final"]
+    },
+    "DiagnosticsDetail": {
+      "description": "'all' returns every diagnostic. 'focused' returns errors only while any error exists and at most three warnings of one kind. The counts are complete in both cases.",
+      "enum": ["all", "focused"]
+    },
+
+    "Request": {
+      "type": "object",
+      "required": ["op"],
+      "properties": {
+        "vlp": { "$ref": "#/$defs/ProtocolVersion" },
+        "id": { "type": "string", "maxLength": 128 },
+        "op": { "$ref": "#/$defs/Operation" },
+        "params": { "type": "object" }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        { "if": { "properties": { "op": { "const": "reference" } } },
+          "then": { "properties": { "params": { "$ref": "#/$defs/ReferenceParams" } } } },
+        { "if": { "properties": { "op": { "const": "check" } } },
+          "then": { "required": ["params"], "properties": { "params": { "$ref": "#/$defs/CheckParams" } } } },
+        { "if": { "properties": { "op": { "const": "render" } } },
+          "then": { "required": ["params"], "properties": { "params": { "$ref": "#/$defs/RenderParams" } } } },
+        { "if": { "properties": { "op": { "const": "job" } } },
+          "then": { "required": ["params"], "properties": { "params": { "$ref": "#/$defs/JobParams" } } } },
+        { "if": { "properties": { "op": { "const": "view" } } },
+          "then": { "required": ["params"], "properties": { "params": { "$ref": "#/$defs/ViewParams" } } } },
+        { "if": { "properties": { "op": { "const": "measure" } } },
+          "then": { "required": ["params"], "properties": { "params": { "$ref": "#/$defs/MeasureParams" } } } }
+      ]
+    },
+
+    "Response": {
+      "type": "object",
+      "required": ["vlp", "op", "ok", "engine"],
+      "properties": {
+        "vlp": { "$ref": "#/$defs/ProtocolVersion" },
+        "id": { "type": "string", "maxLength": 128 },
+        "op": { "$ref": "#/$defs/Operation" },
+        "ok": { "type": "boolean" },
+        "engine": { "$ref": "#/$defs/Engine" },
+        "result": { "type": "object" },
+        "error": { "$ref": "#/$defs/Error" }
+      },
+      "oneOf": [
+        { "properties": { "ok": { "const": true } }, "required": ["result"], "not": { "required": ["error"] } },
+        { "properties": { "ok": { "const": false } }, "required": ["error"], "not": { "required": ["result"] } }
+      ],
+      "allOf": [
+        { "if": { "properties": { "op": { "const": "capabilities" }, "ok": { "const": true } } },
+          "then": { "properties": { "result": { "$ref": "#/$defs/CapabilitiesResult" } } } },
+        { "if": { "properties": { "op": { "const": "reference" }, "ok": { "const": true } } },
+          "then": { "properties": { "result": { "$ref": "#/$defs/ReferenceResult" } } } },
+        { "if": { "properties": { "op": { "const": "check" }, "ok": { "const": true } } },
+          "then": { "properties": { "result": { "$ref": "#/$defs/CheckResult" } } } },
+        { "if": { "properties": { "op": { "enum": ["render", "job"] }, "ok": { "const": true } } },
+          "then": { "properties": { "result": { "$ref": "#/$defs/RenderResult" } } } },
+        { "if": { "properties": { "op": { "const": "view" }, "ok": { "const": true } } },
+          "then": { "properties": { "result": { "$ref": "#/$defs/ViewResult" } } } },
+        { "if": { "properties": { "op": { "const": "measure" }, "ok": { "const": true } } },
+          "then": { "properties": { "result": { "$ref": "#/$defs/MeasureResult" } } } }
+      ]
+    },
+
+    "Engine": {
+      "description": "Which implementation answered. render_revision changes whenever the pixels of an unchanged program may change.",
+      "type": "object",
+      "required": ["name", "version", "render_revision", "language"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "render_revision": { "type": "integer", "minimum": 1 },
+        "language": { "$ref": "#/$defs/ProtocolVersion" }
+      }
+    },
+
+    "Error": {
+      "description": "A failure of the call itself. A scene program that contains mistakes is not a protocol error: see CheckResult.valid and RenderResult.status.",
+      "type": "object",
+      "required": ["code", "message", "retryable"],
+      "properties": {
+        "code": {
+          "enum": ["invalid_request", "unsupported_version", "unknown_operation", "invalid_params", "too_large",
+                   "limit_exceeded", "not_found", "busy", "cancelled", "deadline_exceeded", "unauthorized", "internal"]
+        },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" },
+        "hint": { "type": "string" },
+        "param": { "type": "string" },
+        "allowed": { "type": "array", "items": { "type": "string" } },
+        "limit": {
+          "type": "object",
+          "required": ["name", "max"],
+          "properties": {
+            "name": { "type": "string" },
+            "max": { "type": "number" },
+            "requested": { "type": "number" }
+          }
+        },
+        "retry_after_ms": { "type": "integer", "minimum": 0 },
+        "supported_versions": { "type": "array", "items": { "$ref": "#/$defs/ProtocolVersion" } },
+        "incident": { "type": "string" }
+      }
+    },
+
+    "Counts": {
+      "description": "Totals before any trimming of the diagnostics list.",
+      "type": "object",
+      "required": ["errors", "warnings", "findings"],
+      "properties": {
+        "errors": { "type": "integer", "minimum": 0 },
+        "warnings": { "type": "integer", "minimum": 0 },
+        "findings": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "Diagnostic": {
+      "description": "One message about the program (codes E and W) or about the rendered picture (codes V). 'code' is stable and documented in the code registry; 'message' is for reading, not for parsing. line and col are 1-based and count Unicode characters; offset and length count UTF-8 bytes from the start of the program.",
+      "type": "object",
+      "required": ["code", "severity", "message"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[EWV][0-9]{3}$" },
+        "severity": { "enum": ["error", "warning", "note"] },
+        "message": { "type": "string" },
+        "hint": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 },
+        "col": { "type": "integer", "minimum": 1 },
+        "end_line": { "type": "integer", "minimum": 1 },
+        "end_col": { "type": "integer", "minimum": 1 },
+        "offset": { "type": "integer", "minimum": 0 },
+        "length": { "type": "integer", "minimum": 0 },
+        "source_line": { "type": "string", "maxLength": 240 },
+        "object": { "type": "string" },
+        "fix": {
+          "description": "A replacement that removes the diagnostic: replace 'length' bytes at 'offset' with 'replace_with'.",
+          "type": "object",
+          "required": ["offset", "length", "replace_with"],
+          "properties": {
+            "offset": { "type": "integer", "minimum": 0 },
+            "length": { "type": "integer", "minimum": 0 },
+            "replace_with": { "type": "string" }
+          }
+        },
+        "data": { "description": "Code-specific values; their names and types are listed per code in the registry.", "type": "object" },
+        "repeats": { "description": "How many diagnostics of this kind this entry stands for.", "type": "integer", "minimum": 1 },
+        "also_on_lines": { "type": "array", "items": { "type": "integer", "minimum": 1 } }
+      }
+    },
+
+    "Vec3": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+
+    "Box": {
+      "description": "A rectangle in the picture as fractions of its width and height, measured from the top-left corner.",
+      "type": "object",
+      "required": ["left", "top", "right", "bottom"],
+      "properties": {
+        "left": { "$ref": "#/$defs/Fraction" },
+        "top": { "$ref": "#/$defs/Fraction" },
+        "right": { "$ref": "#/$defs/Fraction" },
+        "bottom": { "$ref": "#/$defs/Fraction" }
+      }
+    },
+
+    "Color": {
+      "type": "object",
+      "required": ["hex", "name"],
+      "properties": {
+        "hex": { "type": "string", "pattern": "^#[0-9a-f]{6}$" },
+        "name": { "type": "string" }
+      }
+    },
+
+    "ObjectSummary": {
+      "description": "Where the compiler placed an object, in metres, after every relation such as 'on:' has been resolved.",
+      "type": "object",
+      "required": ["name", "kind", "line"],
+      "properties": {
+        "name": { "type": "string" },
+        "kind": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 },
+        "material": { "type": "string" },
+        "center_m": { "$ref": "#/$defs/Vec3" },
+        "size_m": { "$ref": "#/$defs/Vec3" },
+        "rests_on": { "type": "string" },
+        "inside": { "type": "string" }
+      }
+    },
+
+    "Estimate": {
+      "type": "object",
+      "required": ["width", "height", "samples", "seconds", "memory_bytes", "basis"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "samples": { "type": "integer", "minimum": 1 },
+        "seconds": { "type": "number", "minimum": 0 },
+        "memory_bytes": { "type": "integer", "minimum": 0 },
+        "basis": { "description": "'measured' when a calibration pass ran on this scene on this machine.", "enum": ["measured", "default"] }
+      }
+    },
+
+    "ProgramInfo": {
+      "type": "object",
+      "required": ["bytes", "lines", "sha256", "language", "normalized"],
+      "properties": {
+        "bytes": { "type": "integer", "minimum": 0 },
+        "lines": { "type": "integer", "minimum": 0 },
+        "sha256": { "$ref": "#/$defs/Sha256" },
+        "language": { "$ref": "#/$defs/ProtocolVersion" },
+        "normalized": {
+          "description": "Every change the protocol layer made to the text before compiling it. Empty in the normal case.",
+          "type": "array",
+          "items": { "enum": ["removed_byte_order_mark", "removed_code_fence"] }
+        }
+      }
+    },
+
+    "CheckParams": {
+      "type": "object",
+      "required": ["program"],
+      "properties": {
+        "program": { "type": "string", "minLength": 1 },
+        "diagnostics": { "$ref": "#/$defs/DiagnosticsDetail" },
+        "strict": { "description": "Treat near-miss spellings that the compiler would repair (codes W340-W351) as errors.", "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+
+    "CheckResult": {
+      "type": "object",
+      "required": ["valid", "counts", "diagnostics", "diagnostics_omitted", "objects", "program"],
+      "properties": {
+        "valid": { "description": "True when the program compiled to a scene that can be rendered.", "type": "boolean" },
+        "counts": { "$ref": "#/$defs/Counts" },
+        "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/Diagnostic" } },
+        "diagnostics_omitted": { "type": "integer", "minimum": 0 },
+        "objects": { "type": "array", "items": { "$ref": "#/$defs/ObjectSummary" } },
+        "estimate": { "$ref": "#/$defs/Estimate" },
+        "program": { "$ref": "#/$defs/ProgramInfo" }
+      }
+    },
+
+    "RenderParams": {
+      "type": "object",
+      "required": ["program"],
+      "properties": {
+        "program": { "type": "string", "minLength": 1 },
+        "quality": { "$ref": "#/$defs/Quality" },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "samples": { "type": "integer", "minimum": 1 },
+        "seed": { "type": "integer", "minimum": 0 },
+        "denoise": { "type": "boolean" },
+        "region_left": { "$ref": "#/$defs/Fraction" },
+        "region_top": { "$ref": "#/$defs/Fraction" },
+        "region_right": { "$ref": "#/$defs/Fraction" },
+        "region_bottom": { "$ref": "#/$defs/Fraction" },
+        "wait_ms": { "description": "How long this call may block. When the picture is not ready by then the result has status 'running' and a job.", "type": "integer", "minimum": 0 },
+        "max_seconds": { "description": "The caller's own time budget for the whole render. A server may apply a lower one.", "type": "integer", "minimum": 1 },
+        "report": { "description": "Include the report measured from the picture. Default true.", "type": "boolean" },
+        "diagnostics": { "$ref": "#/$defs/DiagnosticsDetail" },
+        "strict": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+
+    "Job": {
+      "type": "object",
+      "required": ["id", "state", "progress", "elapsed_ms"],
+      "properties": {
+        "id": { "$ref": "#/$defs/JobId" },
+        "state": { "enum": ["queued", "running", "done", "cancelled", "failed"] },
+        "progress": { "$ref": "#/$defs/Fraction" },
+        "elapsed_ms": { "type": "integer", "minimum": 0 },
+        "eta_ms": { "type": "integer", "minimum": 0 },
+        "poll_after_ms": { "type": "integer", "minimum": 0 },
+        "queue_position": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "Image": {
+      "description": "A stored picture. The same program, options and render_revision always give the same id and the same bytes.",
+      "type": "object",
+      "required": ["id", "width", "height", "samples", "seed", "denoised", "exposure_ev", "format", "bytes", "sha256", "pixel_hash", "render_ms"],
+      "properties": {
+        "id": { "$ref": "#/$defs/ImageId" },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "samples": { "type": "integer", "minimum": 1 },
+        "seed": { "type": "integer", "minimum": 0 },
+        "quality": { "$ref": "#/$defs/Quality" },
+        "denoised": { "type": "boolean" },
+        "exposure_ev": { "type": "number" },
+        "format": { "enum": ["png"] },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "sha256": { "$ref": "#/$defs/Sha256" },
+        "pixel_hash": { "description": "Fingerprint of the decoded pixels, independent of the file encoding.", "type": "string", "pattern": "^[0-9a-f]{16}$" },
+        "render_ms": { "type": "integer", "minimum": 0 },
+        "million_rays": { "type": "number", "minimum": 0 },
+        "region": { "$ref": "#/$defs/Box" },
+        "path": { "description": "Local bindings only: where the file is.", "type": "string" },
+        "url": { "description": "HTTP binding only: where the bytes can be fetched.", "type": "string" },
+        "expires_in_s": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "ReportObject": {
+      "type": "object",
+      "required": ["name", "kind", "in_frame", "image_percent"],
+      "properties": {
+        "name": { "type": "string" },
+        "kind": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 },
+        "mark": { "description": "The number drawn on this object when a view is requested with annotate 'marks'.", "type": "integer", "minimum": 1 },
+        "in_frame": { "type": "boolean" },
+        "image_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "visible_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "box": { "$ref": "#/$defs/Box" },
+        "cut_off": { "type": "boolean" },
+        "distance_m": { "type": "number", "minimum": 0 },
+        "color": { "$ref": "#/$defs/Color" },
+        "hidden_by": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "Layout": {
+      "description": "A coarse map of which object is seen where: one character per cell, top row first.",
+      "type": "object",
+      "required": ["columns", "rows", "cells", "legend"],
+      "properties": {
+        "columns": { "type": "integer", "minimum": 1 },
+        "rows": { "type": "integer", "minimum": 1 },
+        "cells": { "type": "array", "items": { "type": "string" } },
+        "legend": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["key", "object"],
+            "properties": { "key": { "type": "string", "minLength": 1, "maxLength": 1 }, "object": { "type": "string" } }
+          }
+        }
+      }
+    },
+
+    "Report": {
+      "description": "Measurements taken from the delivered picture and from the object-per-pixel buffer of the same render.",
+      "type": "object",
+      "required": ["summary", "objects", "findings"],
+      "properties": {
+        "summary": {
+          "type": "object",
+          "required": ["mean_brightness_percent", "black_percent", "white_percent", "background_percent"],
+          "properties": {
+            "mean_brightness_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+            "black_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+            "white_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+            "background_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+            "noise_percent": { "type": "number", "minimum": 0 }
+          }
+        },
+        "objects": { "type": "array", "items": { "$ref": "#/$defs/ReportObject" } },
+        "layout": { "$ref": "#/$defs/Layout" },
+        "findings": { "type": "array", "items": { "$ref": "#/$defs/Diagnostic" } }
+      }
+    },
+
+    "RenderResult": {
+      "description": "Also the result of the 'job' operation.",
+      "type": "object",
+      "required": ["status", "valid", "counts", "diagnostics", "diagnostics_omitted"],
+      "properties": {
+        "status": {
+          "description": "'rejected' means the program has errors and nothing was rendered.",
+          "enum": ["done", "running", "rejected", "cancelled", "failed"]
+        },
+        "valid": { "type": "boolean" },
+        "counts": { "$ref": "#/$defs/Counts" },
+        "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/Diagnostic" } },
+        "diagnostics_omitted": { "type": "integer", "minimum": 0 },
+        "job": { "$ref": "#/$defs/Job" },
+        "image": { "$ref": "#/$defs/Image" },
+        "report": { "$ref": "#/$defs/Report" },
+        "estimate": { "$ref": "#/$defs/Estimate" }
+      },
+      "allOf": [
+        { "if": { "properties": { "status": { "const": "done" } } }, "then": { "required": ["image"] } },
+        { "if": { "properties": { "status": { "const": "running" } } }, "then": { "required": ["job"] } },
+        { "if": { "properties": { "status": { "const": "rejected" } } }, "then": { "properties": { "valid": { "const": false } } } }
+      ]
+    },
+
+    "JobParams": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "$ref": "#/$defs/JobId" },
+        "action": { "enum": ["status", "wait", "cancel"] },
+        "wait_ms": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+
+    "ViewParams": {
+      "type": "object",
+      "required": ["image"],
+      "properties": {
+        "image": { "$ref": "#/$defs/ImageId" },
+        "max_side": { "description": "Longest side of the view in pixels. The stored picture is scaled down, never up.", "type": "integer", "minimum": 16 },
+        "crop_object": { "description": "Show the part of the picture around this object.", "type": "string" },
+        "crop_margin": { "description": "Extra space around crop_object as a fraction of its box. Default 0.25.", "type": "number", "minimum": 0 },
+        "crop_left": { "$ref": "#/$defs/Fraction" },
+        "crop_top": { "$ref": "#/$defs/Fraction" },
+        "crop_right": { "$ref": "#/$defs/Fraction" },
+        "crop_bottom": { "$ref": "#/$defs/Fraction" },
+        "annotate": { "description": "'marks' draws a number on every visible object; the numbers are listed in the result.", "enum": ["none", "marks", "outlines"] },
+        "channel": { "description": "'objects' paints every object in one flat colour.", "enum": ["color", "objects", "depth", "normals", "albedo"] },
+        "as": { "description": "'grid' returns the pixels as text for a model that cannot read images.", "enum": ["image", "grid"] },
+        "grid_columns": { "type": "integer", "minimum": 4, "maximum": 96 },
+        "grid_encoding": { "enum": ["palette", "hex"] },
+        "format": { "enum": ["png"] },
+        "inline": { "description": "Put the bytes in the result as base64. Default false: the result gives a path or a URL.", "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+
+    "Grid": {
+      "type": "object",
+      "required": ["columns", "rows", "encoding", "cells"],
+      "properties": {
+        "columns": { "type": "integer", "minimum": 1 },
+        "rows": { "type": "integer", "minimum": 1 },
+        "encoding": { "enum": ["palette", "hex"] },
+        "palette": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["key", "hex", "name"],
+            "properties": {
+              "key": { "type": "string", "minLength": 1, "maxLength": 1 },
+              "hex": { "type": "string", "pattern": "^#[0-9a-f]{6}$" },
+              "name": { "type": "string" },
+              "percent": { "type": "number", "minimum": 0, "maximum": 100 }
+            }
+          }
+        },
+        "cells": { "description": "One string per row, top row first.", "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "ViewResult": {
+      "type": "object",
+      "required": ["image", "width", "height", "channel", "annotate", "crop"],
+      "properties": {
+        "image": { "$ref": "#/$defs/ImageId" },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "channel": { "enum": ["color", "objects", "depth", "normals", "albedo"] },
+        "annotate": { "enum": ["none", "marks", "outlines"] },
+        "crop": { "$ref": "#/$defs/Box" },
+        "format": { "enum": ["png"] },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "sha256": { "$ref": "#/$defs/Sha256" },
+        "data_base64": { "type": "string" },
+        "path": { "type": "string" },
+        "url": { "type": "string" },
+        "marks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["mark", "object"],
+            "properties": {
+              "mark": { "type": "integer", "minimum": 1 },
+              "object": { "type": "string" },
+              "line": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "grid": { "$ref": "#/$defs/Grid" }
+      }
+    },
+
+    "MeasureParams": {
+      "type": "object",
+      "required": ["image"],
+      "properties": {
+        "image": { "$ref": "#/$defs/ImageId" },
+        "objects": { "type": "array", "items": { "type": "string" } },
+        "points": {
+          "description": "Positions as [x, y] fractions of the width and height from the top-left corner.",
+          "type": "array",
+          "items": { "type": "array", "items": { "$ref": "#/$defs/Fraction" }, "minItems": 2, "maxItems": 2 }
+        },
+        "compare_with": { "$ref": "#/$defs/ImageId" }
+      },
+      "additionalProperties": false
+    },
+
+    "MeasureResult": {
+      "type": "object",
+      "required": ["image"],
+      "properties": {
+        "image": { "$ref": "#/$defs/ImageId" },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["x", "y", "color", "luminance_percent"],
+            "properties": {
+              "x": { "$ref": "#/$defs/Fraction" },
+              "y": { "$ref": "#/$defs/Fraction" },
+              "color": { "$ref": "#/$defs/Color" },
+              "luminance_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+              "object": { "type": "string" }
+            }
+          }
+        },
+        "objects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "visible"],
+            "properties": {
+              "name": { "type": "string" },
+              "visible": { "type": "boolean" },
+              "color": { "$ref": "#/$defs/Color" },
+              "luminance_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+              "image_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+              "box": { "$ref": "#/$defs/Box" }
+            }
+          }
+        },
+        "comparison": {
+          "type": "object",
+          "required": ["other", "changed_percent", "mean_difference_percent", "objects_changed"],
+          "properties": {
+            "other": { "$ref": "#/$defs/ImageId" },
+            "changed_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+            "mean_difference_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+            "changed_box": { "$ref": "#/$defs/Box" },
+            "objects_changed": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+
+    "ReferenceParams": {
+      "type": "object",
+      "properties": {
+        "topic": { "description": "'index', a section such as 'materials', a kind such as 'sphere', a property such as 'sphere.radius', a function, a preset or a message code such as 'E201'. Default: the reference card.", "type": "string" },
+        "detail": { "enum": ["card", "guide", "full"] },
+        "format": { "enum": ["markdown", "json"] }
+      },
+      "additionalProperties": false
+    },
+
+    "ReferenceResult": {
+      "type": "object",
+      "required": ["language", "topic", "detail", "format", "words"],
+      "properties": {
+        "language": { "$ref": "#/$defs/ProtocolVersion" },
+        "topic": { "type": "string" },
+        "detail": { "enum": ["card", "guide", "full"] },
+        "format": { "enum": ["markdown", "json"] },
+        "words": { "type": "integer", "minimum": 0 },
+        "text": { "type": "string" },
+        "data": { "type": "object" },
+        "related": { "type": "array", "items": { "type": "string" } }
+      },
+      "oneOf": [
+        { "properties": { "format": { "const": "markdown" } }, "required": ["text"] },
+        { "properties": { "format": { "const": "json" } }, "required": ["data"] }
+      ]
+    },
+
+    "CapabilitiesResult": {
+      "type": "object",
+      "required": ["protocol", "features", "limits", "qualities", "images", "store"],
+      "properties": {
+        "protocol": {
+          "type": "object",
+          "required": ["versions", "operations"],
+          "properties": {
+            "versions": { "type": "array", "items": { "$ref": "#/$defs/ProtocolVersion" }, "minItems": 1 },
+            "operations": { "type": "array", "items": { "$ref": "#/$defs/Operation" } }
+          }
+        },
+        "features": { "description": "Names of optional abilities, for example 'render.region' or 'view.marks'. Clients test for a name; they do not infer abilities from version numbers.", "type": "array", "items": { "type": "string" } },
+        "limits": { "description": "Every limit this server enforces, by name.", "type": "object", "additionalProperties": { "type": "number" } },
+        "qualities": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["max_side", "samples"],
+            "properties": {
+              "max_side": { "type": ["integer", "null"] },
+              "samples": { "type": ["integer", "null"] }
+            }
+          }
+        },
+        "images": {
+          "type": "object",
+          "required": ["formats", "channels", "annotate"],
+          "properties": {
+            "formats": { "type": "array", "items": { "type": "string" } },
+            "channels": { "type": "array", "items": { "type": "string" } },
+            "annotate": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "store": {
+          "type": "object",
+          "required": ["retention_s"],
+          "properties": { "retention_s": { "type": "integer", "minimum": 0 } }
+        }
+      }
+    }
+  }
+}
